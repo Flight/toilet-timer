@@ -3,39 +3,58 @@
 
 # Toilet Timer
 
-An ESP32-S3 based timer project with LED control using the [led_strip](https://components.espressif.com/component/espressif/led_strip) component for addressable LEDs like [WS2812](https://cdn-shop.adafruit.com/datasheets/WS2812B.pdf).
+An ESP32-S3 based timer application for the LilyGo Mini E-Paper S3 development board featuring a 1.02" 128x80 monochrome e-paper display.
+
+## Features
+
+- E-paper display support (128x80 resolution)
+- LVGL graphics library integration for UI rendering
+- Modular e-paper driver architecture
+- Low power consumption with e-paper display retention
+- Hello World demo application
 
 ## Hardware Required
 
-* ESP32-S3 development board (e.g., ESP32-S3-DevKitC)
-* Addressable LED strip (WS2812 or compatible)
-* USB cable for power and programming
+* [LilyGo Mini E-Paper S3](https://www.lilygo.cc/) development board
+  - ESP32-S3 microcontroller
+  - 1.02" e-paper display (128x80 pixels)
+  - Built-in USB-C for programming and power
+* USB-C cable
+
+## Project Structure
+
+```
+toilet-timer/
+├── main/
+│   ├── main.c           # Main application logic
+│   ├── epd_driver.c     # E-paper display driver implementation
+│   ├── epd_driver.h     # E-paper display driver header
+│   └── CMakeLists.txt   # Component build configuration
+├── README.md
+└── CMakeLists.txt       # Project build configuration
+```
 
 ## Setup and Build
 
-### 1. Set the Target Chip
+### 1. Install ESP-IDF
+
+Follow the [ESP-IDF Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/get-started/index.html) to install the ESP-IDF development framework.
+
+### 2. Set the Target Chip
 
 ```bash
 idf.py set-target esp32s3
 ```
 
-### 2. Configure the Project
-
-Open the project configuration menu:
+### 3. Build the Project
 
 ```bash
-idf.py menuconfig
+idf.py build
 ```
 
-In the `Example Configuration` menu:
-* Set LED type to `LED strip`
-* Select `RMT` as the backend peripheral
-* Configure the GPIO pin for your LED strip
-* Set the blinking period in milliseconds
+### 4. Flash and Monitor
 
-### 3. Build and Flash
-
-Build, flash, and monitor the project:
+Connect your LilyGo Mini E-Paper S3 board via USB-C and run:
 
 ```bash
 idf.py flash monitor
@@ -45,12 +64,69 @@ To exit the serial monitor, press `Ctrl+]`.
 
 ## Development
 
-The main application code is in [main/main.c](main/main.c). You can modify the LED behavior by:
-- Changing colors: `led_strip_set_pixel(led_strip, 0, R, G, B)` (values 0-255)
-- Adjusting timing: Modify the delay values
-- Adding timer logic: Implement your custom timer functionality
+### E-Paper Display Driver
+
+The e-paper display driver is implemented in [main/epd_driver.c](main/epd_driver.c) and provides a clean API:
+
+```c
+// Initialize display
+epd_config_t config = {
+    .pin_mosi = 35,
+    .pin_clk = 36,
+    .pin_cs = 37,
+    .pin_dc = 34,
+    .pin_rst = 38,
+    .pin_busy = 39,
+    .width = 128,
+    .height = 80,
+};
+epd_init(&config);
+
+// Display a buffer
+uint8_t framebuffer[128 * 80 / 8];
+epd_display_buffer(framebuffer, sizeof(framebuffer));
+
+// Clear display to white
+epd_clear();
+```
+
+### Pin Configuration (LilyGo Mini E-Paper S3)
+
+| Function | GPIO | Description |
+|----------|------|-------------|
+| MOSI     | 35   | SPI data out |
+| CLK      | 36   | SPI clock |
+| CS       | 37   | Chip select |
+| DC       | 34   | Data/Command |
+| RST      | 38   | Reset |
+| BUSY     | 39   | Busy status |
+
+### Adding Custom UI
+
+The application uses [LVGL](https://lvgl.io/) for UI rendering. You can create custom screens by modifying [main/main.c](main/main.c):
+
+```c
+// Create UI elements
+lv_obj_t *label = lv_label_create(lv_scr_act());
+lv_label_set_text(label, "Your Text");
+lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+
+// Render and display
+lv_task_handler();
+epd_display_buffer(framebuffer, buffer_size);
+```
+
+## Dependencies
+
+This project uses the following ESP-IDF components:
+
+- [espressif/esp_lvgl_port](https://components.espressif.com/components/espressif/esp_lvgl_port) - LVGL port for ESP32
+- [lvgl/lvgl](https://components.espressif.com/components/lvgl/lvgl) - Graphics library
+- [espressif/led_strip](https://components.espressif.com/components/espressif/led_strip) - LED control library
 
 ## Resources
 
-- [ESP-IDF Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html)
-- [LED Strip Component Documentation](https://components.espressif.com/component/espressif/led_strip)
+- [ESP-IDF Documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/)
+- [LVGL Documentation](https://docs.lvgl.io/)
+- [LilyGo GitHub](https://github.com/Xinyuan-LilyGO)
+- [E-Paper Display Specifications](https://www.good-display.com/)
