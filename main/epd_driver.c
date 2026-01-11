@@ -2,7 +2,7 @@
  * @file epd_driver.c
  * @brief E-Paper Display Driver Implementation for LilyGo Mini E-Paper S3
  *
- * SPDX-License-Identifier: CC0-1.0
+
  */
 
 #include "epd_driver.h"
