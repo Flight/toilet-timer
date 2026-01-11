@@ -5,8 +5,9 @@
 
  */
 
+#include "sdkconfig.h"
 #include "display.h"
-#include "epd_driver.h"
+#include "epd_driver_gdew0102t4.h"
 #include "graphics.h"
 #include "config.h"
 #include "esp_log.h"
@@ -30,15 +31,15 @@ esp_err_t display_init(void)
 
     /* Initialize e-paper hardware */
     const epd_config_t epd_config = {
-        .pin_mosi = EPD_PIN_MOSI,
-        .pin_clk = EPD_PIN_CLK,
-        .pin_cs = EPD_PIN_CS,
-        .pin_dc = EPD_PIN_DC,
-        .pin_rst = EPD_PIN_RST,
-        .pin_busy = EPD_PIN_BUSY,
-        .pin_power = EPD_PIN_POWER,
-        .width = DISPLAY_WIDTH,
-        .height = DISPLAY_HEIGHT,
+        .pin_mosi = CONFIG_EPD_PIN_MOSI,
+        .pin_clk = CONFIG_EPD_PIN_CLK,
+        .pin_cs = CONFIG_EPD_PIN_CS,
+        .pin_dc = CONFIG_EPD_PIN_DC,
+        .pin_rst = CONFIG_EPD_PIN_RST,
+        .pin_busy = CONFIG_EPD_PIN_BUSY,
+        .pin_power = CONFIG_EPD_PIN_POWER,
+        .width = CONFIG_DISPLAY_WIDTH,
+        .height = CONFIG_DISPLAY_HEIGHT,
     };
 
     esp_err_t ret = epd_init(&epd_config);
@@ -48,7 +49,7 @@ esp_err_t display_init(void)
     }
 
     /* Allocate framebuffer */
-    s_display.buffer_size = (DISPLAY_WIDTH * DISPLAY_HEIGHT) / 8;
+    s_display.buffer_size = (CONFIG_DISPLAY_WIDTH * CONFIG_DISPLAY_HEIGHT) / 8;
     s_display.framebuffer = malloc(s_display.buffer_size);
     if (s_display.framebuffer == NULL) {
         ESP_LOGE(TAG, "Failed to allocate framebuffer");
@@ -57,13 +58,13 @@ esp_err_t display_init(void)
     }
 
     /* Initialize graphics context */
-    graphics_init(DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    graphics_init(CONFIG_DISPLAY_WIDTH, CONFIG_DISPLAY_HEIGHT);
 
     /* Clear to white */
     memset(s_display.framebuffer, 0xFF, s_display.buffer_size);
 
     s_display.initialized = true;
-    ESP_LOGI(TAG, "Display initialized (%dx%d)", DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    ESP_LOGI(TAG, "Display initialized (%dx%d)", CONFIG_DISPLAY_WIDTH, CONFIG_DISPLAY_HEIGHT);
 
     return ESP_OK;
 }
@@ -110,7 +111,7 @@ void display_draw_text_centered(int y, const char *text, uint8_t color)
     }
 
     int text_width = measure_string_width(text);
-    int x = (DISPLAY_WIDTH - text_width) / 2;
+    int x = (CONFIG_DISPLAY_WIDTH - text_width) / 2;
 
     draw_string(s_display.framebuffer, x, y, text, color);
 }
@@ -142,10 +143,10 @@ esp_err_t display_sleep(void)
 
 int display_get_width(void)
 {
-    return DISPLAY_WIDTH;
+    return CONFIG_DISPLAY_WIDTH;
 }
 
 int display_get_height(void)
 {
-    return DISPLAY_HEIGHT;
+    return CONFIG_DISPLAY_HEIGHT;
 }

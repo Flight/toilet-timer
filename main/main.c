@@ -3,6 +3,7 @@
  * @brief Toilet Timer - E-Paper Display Application
  */
 
+#include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -25,7 +26,7 @@ void app_main(void)
     display_clear();
 
     const char *text = "Киця-Кицюня";
-    int y = (DISPLAY_HEIGHT - FONT_CHAR_HEIGHT) / 2;
+    int y = (CONFIG_DISPLAY_HEIGHT - FONT_CHAR_HEIGHT) / 2;
     display_draw_text_centered(y, text, 0);
 
     /* Update physical display */
