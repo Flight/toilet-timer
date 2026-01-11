@@ -1,0 +1,109 @@
+menu "DONGLE GPIO SETTINGS"
+  config ENV_GPIO_RANGE_MIN
+    int
+    default 0
+
+  config ENV_GPIO_RANGE_MAX
+    int
+    default 48
+
+  config BATTERY_LEVEL_GPIO
+    int "Battery level GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 16
+    help
+      GPIO number (IOxx) for the battery level.
+endmenu
+
+menu "E-PAPER DISPLAY SETTINGS"
+  config EPD_PIN_MOSI
+    int "E-Paper MOSI GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 15
+    help
+      GPIO number (IOxx) for the E-Paper display MOSI pin.
+
+  config EPD_PIN_CLK
+    int "E-Paper CLK GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 14
+    help
+      GPIO number (IOxx) for the E-Paper display CLK pin.
+
+  config EPD_PIN_CS
+    int "E-Paper CS GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 13
+    help
+      GPIO number (IOxx) for the E-Paper display CS pin.
+
+  config EPD_PIN_DC
+    int "E-Paper DC GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 12
+    help
+      GPIO number (IOxx) for the E-Paper display DC pin.
+
+  config EPD_PIN_RST
+    int "E-Paper RST GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 11
+    help
+      GPIO number (IOxx) for the E-Paper display RST pin.
+
+  config EPD_PIN_BUSY
+    int "E-Paper BUSY GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 10
+    help
+      GPIO number (IOxx) for the E-Paper display BUSY pin.
+
+  config EPD_PIN_POWER
+    int "E-Paper POWER GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 42
+    help
+      GPIO number (IOxx) for the E-Paper display POWER pin.
+
+  config DISPLAY_WIDTH
+    int "Display width in pixels"
+    default 80
+    help
+      Width of the E-Paper display in pixels.
+
+  config DISPLAY_HEIGHT
+    int "Display height in pixels"
+    default 128
+    help
+      Height of the E-Paper display in pixels.
+endmenu
+
+menu "DONGLE WI-FI SETTINGS"
+  config WIFI_SSID
+    string "Wi-Fi SSID"
+    default "wifi_network_name"
+    help
+        SSID (network name).
+
+  config WIFI_PASSWORD
+    string "Wi-Fi Password"
+    default "wifi_password"
+    help
+      Wi-Fi password.
+endmenu
+
+menu "DONGLE OTA UPDATE SETTINGS"
+  config IS_ESP32_FIRMWARE_UPGRADE_ENABLED
+    bool "Enable ESP32 firmware upgrade"
+    default n
+    help
+      Enable ESP32 firmware upgrade.
+
+  config ESP32_FIRMWARE_UPGRADE_URL
+    string "ESP32 Firmware upgrade endpoint URL"
+    depends on IS_ESP32_FIRMWARE_UPGRADE_ENABLED
+    default "https://firmware.dongle-updater.com/toilet-timer.bin"
+    help
+      URL of server which hosts the ESP32 firmware image.
+      Use http://127.0.0.1:5001/toilet-timer.bin for local testing.
+endmenu

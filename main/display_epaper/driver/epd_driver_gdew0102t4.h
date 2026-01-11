@@ -1,10 +1,10 @@
 /**
- * @file epd_driver.h
- * @brief E-Paper Display Driver for LilyGo Mini E-Paper S3
+ * @file epd_driver_gdew0102t4.h
+ * @brief E-Paper Display Driver for GDEW0102T4 (LilyGo Mini E-Paper S3)
  */
 
-#ifndef EPD_DRIVER_H
-#define EPD_DRIVER_H
+#ifndef EPD_DRIVER_GDEW0102T4_H
+#define EPD_DRIVER_GDEW0102T4_H
 
 #include <stdint.h>
 #include "esp_err.h"
@@ -89,4 +89,4 @@ uint16_t epd_get_width(void);
  */
 uint16_t epd_get_height(void);
 
-#endif /* EPD_DRIVER_H */
+#endif /* EPD_DRIVER_GDEW0102T4_H */

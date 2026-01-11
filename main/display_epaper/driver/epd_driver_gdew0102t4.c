@@ -1,11 +1,11 @@
 /**
- * @file epd_driver.c
- * @brief E-Paper Display Driver Implementation for LilyGo Mini E-Paper S3
+ * @file epd_driver_gdew0102t4.c
+ * @brief E-Paper Display Driver Implementation for GDEW0102T4 (LilyGo Mini E-Paper S3)
  *
 
  */
 
-#include "epd_driver.h"
+#include "epd_driver_gdew0102t4.h"
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
