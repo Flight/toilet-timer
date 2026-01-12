@@ -4,9 +4,9 @@
  */
 
 #include "graphics.h"
-#include "font.h"
+#include "fonts/font.h"
 #include "utf8.h"
-#include "config.h"
+#include "global_constants.h"
 
 static struct {
     int width;

@@ -14,5 +14,5 @@
     "--query-driver=~/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20251107/xtensa-esp-elf/bin/xtensa-esp32s3-elf-gcc",
     "--compile-commands-dir=~/Library/Mobile Documents/com~apple~CloudDocs/esp32/toiler-timer/build"
   ],
-  "idf.flashType": "JTAG"
+  "idf.flashType": "UART"
 }

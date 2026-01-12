@@ -7,9 +7,9 @@
 
 #include "sdkconfig.h"
 #include "display.h"
-#include "epd_driver_gdew0102t4.h"
+#include "driver/epd_driver_gdew0102t4.h"
 #include "graphics.h"
-#include "config.h"
+#include "global_constants.h"
 #include "esp_log.h"
 #include <stdlib.h>
 #include <string.h>

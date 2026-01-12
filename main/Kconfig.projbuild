@@ -7,12 +7,40 @@ menu "DONGLE GPIO SETTINGS"
     int
     default 48
 
+  config IS_BATTERY_LEVEL_ENABLED
+    bool "Enable battery level"
+    default y
+    help
+      Enable battery level.
+
   config BATTERY_LEVEL_GPIO
     int "Battery level GPIO number"
     range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
     default 16
+    depends on IS_BATTERY_LEVEL_ENABLED
     help
       GPIO number (IOxx) for the battery level.
+
+  config BUTTON_PUSH_GPIO
+    int "Push button GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 0
+    help
+      GPIO number (IOxx) for the push button.
+
+  config BUTTON_LEFT_GPIO
+    int "Left button GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 3
+    help
+      GPIO number (IOxx) for the left button.
+
+  config BUTTON_RIGHT_GPIO
+    int "Right button GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 4
+    help
+      GPIO number (IOxx) for the right button.
 endmenu
 
 menu "E-PAPER DISPLAY SETTINGS"
