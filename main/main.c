@@ -16,6 +16,7 @@
 #include "display_epaper/display.h"
 #include "system_state/system_state.h"
 #include "battery_level/battery_level.h"
+#include "show_messages/show_messages.h"
 #include "wifi/wifi.h"
 #include "ota_update/ota_update.h"
 
@@ -37,32 +38,11 @@ void app_main(void)
         return;
     }
 
-    if (display_init() != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize display");
-        return;
-    }
-
-    // const char *text = "Киця-Кицюня";
-    const char *text = "Манюююня";
-    int y = (CONFIG_DISPLAY_HEIGHT - FONT_CHAR_HEIGHT) / 2;
-    display_draw_text_centered(y, text, 0);
-
-    /* Update physical display */
-    if (display_update() != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to update display");
-        display_deinit();
-        return;
-    }
-
-    /* Put display to sleep */
-    display_sleep();
-
-    ESP_LOGI(TAG, "Display updated successfully");
-
     global_event_group = xEventGroupCreate();
 
+    xTaskCreatePinnedToCore(&show_messages_task, "Show Messages", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(&battery_level_task, "Battery", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(&wifi_task, "Wi-Fi Keeper", configMINIMAL_STACK_SIZE * 3, NULL, 1, NULL, 1);
-    xTaskCreatePinnedToCore(&system_state_task, "System State", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL, 1);
+    // xTaskCreatePinnedToCore(&system_state_task, "System State", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(&ota_update_task, "OTA Update", configMINIMAL_STACK_SIZE * 8, NULL, 1, NULL, 1);
 }
