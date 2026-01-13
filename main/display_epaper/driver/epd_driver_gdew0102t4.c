@@ -314,38 +314,22 @@ esp_err_t epd_display_buffer(const uint8_t *buffer, size_t size)
 
     esp_err_t ret;
 
-    /* Allocate inverted buffer for DTM1 */
-    uint8_t *inverted_buffer = malloc(size);
-    if (inverted_buffer == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate inverted buffer");
-        return ESP_ERR_NO_MEM;
-    }
-
-    /* Prepare inverted data for DTM1 (old buffer) */
-    for (size_t i = 0; i < size; i++) {
-        inverted_buffer[i] = ~buffer[i];
-    }
-
-    /* Write inverted data to DTM1 */
+    /* Write to DTM1 (old buffer) */
     ret = epd_send_command(UC8175_DTM1);
-    if (ret != ESP_OK) {
-        free(inverted_buffer);
-        return ret;
-    }
+    if (ret != ESP_OK) return ret;
 
     gpio_set_level(s_config.pin_dc, 1);
     spi_transaction_t t1 = {
         .length = size * 8,
-        .tx_buffer = inverted_buffer,
+        .tx_buffer = buffer,
     };
     ret = spi_device_polling_transmit(s_spi_handle, &t1);
-    free(inverted_buffer);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to send DTM1 data");
         return ret;
     }
 
-    /* Write normal data to DTM2 (new buffer) */
+    /* Write to DTM2 (new buffer) */
     ret = epd_send_command(UC8175_DTM2);
     if (ret != ESP_OK) return ret;
 
