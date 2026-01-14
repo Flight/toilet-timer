@@ -1,13 +1,12 @@
 #include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include <esp_system.h>
 #include <esp_wifi.h>
 #include <esp_log.h>
 #include <esp_event.h>
-#include <esp_netif_sntp.h>
 #include <lwip/err.h>
 #include <lwip/sys.h>
 #include <string.h>
-#include <time.h>
 
 #include "global_event_group.h"
 
@@ -15,39 +14,12 @@
 
 #define SSID CONFIG_WIFI_SSID
 #define PASSWORD CONFIG_WIFI_PASSWORD
+#define WIFI_CONNECTED_DELAY_MS 5000
+
+#define IP_OBTAINED_BIT BIT0
 
 static const char *TAG = "Wi-Fi";
-static bool sntp_initialized = false;
-
-static void sync_time_with_sntp(void)
-{
-  const TickType_t sync_wait_ticks = pdMS_TO_TICKS(10000);
-
-  if (!sntp_initialized) {
-    const esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
-    esp_netif_sntp_init(&config);
-    sntp_initialized = true;
-  } else {
-    esp_netif_sntp_start();
-  }
-
-  esp_err_t sync_err = esp_netif_sntp_sync_wait(sync_wait_ticks);
-  if (sync_err == ESP_OK) {
-    time_t now = 0;
-    struct tm timeinfo = {0};
-    time(&now);
-    gmtime_r(&now, &timeinfo);
-    ESP_LOGI(TAG, "SNTP time (UTC): %04d-%02d-%02d %02d:%02d:%02d",
-             timeinfo.tm_year + 1900,
-             timeinfo.tm_mon + 1,
-             timeinfo.tm_mday,
-             timeinfo.tm_hour,
-             timeinfo.tm_min,
-             timeinfo.tm_sec);
-  } else {
-    ESP_LOGW(TAG, "SNTP sync failed (%s)", esp_err_to_name(sync_err));
-  }
-}
+static EventGroupHandle_t wifi_internal_event_group;
 
 static void client_mode_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
@@ -68,16 +40,17 @@ static void client_mode_event_handler(void *event_handler_arg, esp_event_base_t 
 
   case WIFI_EVENT_STA_DISCONNECTED:
     xEventGroupClearBits(global_event_group, IS_WIFI_CONNECTED_BIT);
-    ESP_LOGI(TAG, "Lost connection.");
+    xEventGroupClearBits(wifi_internal_event_group, IP_OBTAINED_BIT);
+    ESP_LOGI(TAG, "Lost connection. Reconnecting...");
     xEventGroupSetBits(global_event_group, IS_WIFI_FAILED_BIT);
+    esp_wifi_connect();
     break;
 
   case IP_EVENT_STA_GOT_IP:
     ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
     ESP_LOGI(TAG, "Got IP Address: " IPSTR, IP2STR(&event->ip_info.ip));
     xEventGroupClearBits(global_event_group, IS_WIFI_FAILED_BIT);
-    xEventGroupSetBits(global_event_group, IS_WIFI_CONNECTED_BIT);
-    sync_time_with_sntp();
+    xEventGroupSetBits(wifi_internal_event_group, IP_OBTAINED_BIT);
     break;
 
   default:
@@ -88,6 +61,9 @@ static void client_mode_event_handler(void *event_handler_arg, esp_event_base_t 
 void wifi_task(void *pvParameter)
 {
   ESP_LOGI(TAG, "Wi-Fi task started");
+
+  wifi_internal_event_group = xEventGroupCreate();
+
   esp_netif_init();
   esp_event_loop_create_default();
 
@@ -117,6 +93,29 @@ void wifi_task(void *pvParameter)
   esp_wifi_start();
 
   while (true) {
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    // Wait for IP address to be obtained
+    EventBits_t bits = xEventGroupWaitBits(wifi_internal_event_group,
+                                           IP_OBTAINED_BIT,
+                                           pdFALSE,
+                                           pdTRUE,
+                                           portMAX_DELAY);
+
+    if (bits & IP_OBTAINED_BIT) {
+      // Wi-Fi connected successfully, wait 5 seconds before setting WIFI_CONNECTED bit
+      ESP_LOGI(TAG, "Waiting %d ms before activating WIFI_CONNECTED bit", WIFI_CONNECTED_DELAY_MS);
+      vTaskDelay(pdMS_TO_TICKS(WIFI_CONNECTED_DELAY_MS));
+
+      xEventGroupSetBits(global_event_group, IS_WIFI_CONNECTED_BIT);
+      ESP_LOGI(TAG, "WIFI_CONNECTED bit activated");
+
+      // Wait for disconnection by checking if the bit gets cleared
+      while (xEventGroupGetBits(wifi_internal_event_group) & IP_OBTAINED_BIT) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+      }
+
+      ESP_LOGI(TAG, "Disconnected, waiting for reconnection");
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
