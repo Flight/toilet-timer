@@ -110,10 +110,10 @@ void display_draw_text_centered(int y, const char *text, uint8_t color)
         return;
     }
 
-    int text_width = measure_string_width(text);
-    int x = (CONFIG_DISPLAY_WIDTH - text_width) / 2;
-
-    draw_string(s_display.framebuffer, x, y, text, color);
+    /* With 90-degree rotation, text flows downward (vertically)
+     * The y parameter is used as the x position for the text
+     */
+    draw_string(s_display.framebuffer, y, 0, text, color);
 }
 
 int display_measure_text(const char *text)
