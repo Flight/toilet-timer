@@ -8,10 +8,8 @@ An ESP32-S3 based timer application for the LilyGo Mini E-Paper S3 development b
 ## Features
 
 - E-paper display support (128x80 resolution)
-- LVGL graphics library integration for UI rendering
 - Modular e-paper driver architecture
 - Low power consumption with e-paper display retention
-- Hello World demo application
 
 ## Hardware Required
 
@@ -101,32 +99,29 @@ epd_clear();
 | RST      | 38   | Reset |
 | BUSY     | 39   | Busy status |
 
-### Adding Custom UI
+## Local OTA Update
 
-The application uses [LVGL](https://lvgl.io/) for UI rendering. You can create custom screens by modifying [main/main.c](main/main.c):
+1. Generate a certificate for the OTA Updates. Please **don't forget to fill the server name** on this step:
 
-```c
-// Create UI elements
-lv_obj_t *label = lv_label_create(lv_scr_act());
-lv_label_set_text(label, "Your Text");
-lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+   **Common Name (e.g. server FQDN or YOUR name) []: 192.168.50.111** (your local IP address).
 
-// Render and display
-lv_task_handler();
-epd_display_buffer(framebuffer, buffer_size);
-```
+   `openssl req -newkey rsa:2048 -new -nodes -x509 -days 365 -keyout local_ota_server/key.pem -out main/ota_update/cert.pem -subj "/CN=192.168.50.111"`
 
-## Dependencies
+2. Create new GIT Tag
 
-This project uses the following ESP-IDF components:
+   `git tag -a v0.0.1 -m "new release"`
 
-- [espressif/esp_lvgl_port](https://components.espressif.com/components/espressif/esp_lvgl_port) - LVGL port for ESP32
-- [lvgl/lvgl](https://components.espressif.com/components/lvgl/lvgl) - Graphics library
-- [espressif/led_strip](https://components.espressif.com/components/espressif/led_strip) - LED control library
+   `git push origin v0.0.1` (optional)
+
+3. Run OTA web-server from `local_ota_server` folder. I'm using this [http-server](https://github.com/http-party/http-server) as **OpenSSL one didn't work properly** and was hanging during download until you don't stop it manually.
+
+   `cd local_ota_server`
+
+   `sudo npx http-server -S -C ../main/ota_update/cert.pem -p 8070 -c-1`
+
+4. Build the project. If the build is successful, the `dongle.bin` file will appear in the `local_ota_server` folder.
 
 ## Resources
 
 - [ESP-IDF Documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/)
-- [LVGL Documentation](https://docs.lvgl.io/)
 - [LilyGo GitHub](https://github.com/Xinyuan-LilyGO)
-- [E-Paper Display Specifications](https://www.good-display.com/)
