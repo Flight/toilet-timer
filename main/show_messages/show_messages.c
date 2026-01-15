@@ -29,10 +29,11 @@ void show_messages_task(void *pvParameter)
         "\n Киця-Кицюня \n      !",
         "\n\n  Манюююня!"
     };
+    int num_texts = sizeof(texts) / sizeof(texts[0]);
     int y = (CONFIG_DISPLAY_HEIGHT - FONT_CHAR_HEIGHT) / 2;
 
     while (true) {
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < num_texts; i++) {
             /* Clear framebuffer */
             display_clear();
 
