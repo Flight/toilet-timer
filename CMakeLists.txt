@@ -11,5 +11,5 @@ add_custom_command(TARGET app POST_BUILD
 
 # Uncomment the following line to enable auto-uploading of toilet-timer.bin to Firebase Storage
 # add_custom_command(TARGET app POST_BUILD
-#                    COMMAND gcloud storage cp ${CMAKE_BINARY_DIR}/toilet-timer.bin gs://dongle-updater.appspot.com/protected_files/dongle.bin
+#                    COMMAND gcloud storage cp ${CMAKE_BINARY_DIR}/toilet-timer.bin gs://dongle-updater.appspot.com/protected_files/toilet-timer.bin
 #                    COMMENT "Uploading toilet-timer.bin to Firebase Storage after build...")
