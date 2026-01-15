@@ -20,6 +20,7 @@
 
 static const char *TAG = "Wi-Fi";
 static EventGroupHandle_t wifi_internal_event_group;
+static bool wifi_should_reconnect = true;
 
 static void client_mode_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
@@ -41,9 +42,13 @@ static void client_mode_event_handler(void *event_handler_arg, esp_event_base_t 
   case WIFI_EVENT_STA_DISCONNECTED:
     xEventGroupClearBits(global_event_group, IS_WIFI_CONNECTED_BIT);
     xEventGroupClearBits(wifi_internal_event_group, IP_OBTAINED_BIT);
-    ESP_LOGI(TAG, "Lost connection. Reconnecting...");
-    xEventGroupSetBits(global_event_group, IS_WIFI_FAILED_BIT);
-    esp_wifi_connect();
+    if (wifi_should_reconnect) {
+      ESP_LOGI(TAG, "Lost connection. Reconnecting...");
+      xEventGroupSetBits(global_event_group, IS_WIFI_FAILED_BIT);
+      esp_wifi_connect();
+    } else {
+      ESP_LOGI(TAG, "Wi-Fi stopped");
+    }
     break;
 
   case IP_EVENT_STA_GOT_IP:
@@ -118,4 +123,12 @@ void wifi_task(void *pvParameter)
 
     vTaskDelay(pdMS_TO_TICKS(100));
   }
+}
+
+void wifi_stop(void)
+{
+  ESP_LOGI(TAG, "Stopping Wi-Fi...");
+  wifi_should_reconnect = false;
+  esp_wifi_disconnect();
+  esp_wifi_stop();
 }
