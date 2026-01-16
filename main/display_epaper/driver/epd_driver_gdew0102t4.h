@@ -76,6 +76,16 @@ esp_err_t epd_clear(void);
 esp_err_t epd_sleep(void);
 
 /**
+ * @brief Wake up the display from sleep mode
+ *
+ * @return
+ *      - ESP_OK on success
+ *      - ESP_ERR_INVALID_STATE if display is not initialized
+ *      - ESP_FAIL if wake up fails
+ */
+esp_err_t epd_wake(void);
+
+/**
  * @brief Get display width
  *
  * @return Display width in pixels

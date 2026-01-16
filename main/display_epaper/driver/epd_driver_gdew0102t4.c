@@ -403,7 +403,38 @@ esp_err_t epd_sleep(void)
         gpio_set_level(s_config.pin_power, 0);
     }
 
-    epd_deinit();
+    s_initialized = false;
+    return ESP_OK;
+}
+
+esp_err_t epd_wake(void)
+{
+    if (s_initialized) {
+        ESP_LOGW(TAG, "E-Paper display already awake");
+        return ESP_OK;
+    }
+
+    ESP_LOGI(TAG, "Waking up E-Paper display");
+
+    /* Power on the display */
+    if (s_config.pin_power >= 0) {
+        gpio_set_level(s_config.pin_power, 1);
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
+    /* Hardware reset */
+    epd_reset();
+
+    /* Re-initialize display */
+    esp_err_t ret = epd_display_init_sequence();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Display init sequence failed during wake");
+        return ret;
+    }
+
+    s_initialized = true;
+    ESP_LOGI(TAG, "E-Paper display woke up successfully");
+
     return ESP_OK;
 }
 
