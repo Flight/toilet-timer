@@ -7,8 +7,10 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <esp_log.h>
+#include <time.h>
 
 #include "../global_constants.h"
+#include "../global_event_group.h"
 #include "../display_epaper/display.h"
 #include "show_messages.h"
 
@@ -24,37 +26,43 @@ void show_messages_task(void *pvParameter)
         return;
     }
 
-    const char *texts[] = {
-        "\n\n    Киця!",
-        "\n Киця-Кицюня \n      !",
-        "\n\n  Манюююня!"
-    };
-    int num_texts = sizeof(texts) / sizeof(texts[0]);
-    int y = (CONFIG_DISPLAY_HEIGHT - FONT_CHAR_HEIGHT) / 2;
+    /* Wait for SNTP time sync to complete */
+    ESP_LOGI(TAG, "Waiting for SNTP sync...");
+    xEventGroupWaitBits(global_event_group, IS_SNTP_SYNC_DONE, pdFALSE, pdTRUE, portMAX_DELAY);
+    ESP_LOGI(TAG, "SNTP sync done, showing date/time");
 
-    while (true) {
-        for (int i = 0; i < num_texts; i++) {
-            /* Clear framebuffer */
-            display_clear();
+    char datetime_str[64];
 
-            /* Draw text */
-            display_draw_text_centered(y, texts[i], 0);
+    time_t now = 0;
+    struct tm timeinfo = {0};
+    time(&now);
+    localtime_r(&now, &timeinfo);
 
-            /* Update physical display */
-            if (display_update() != ESP_OK) {
-                ESP_LOGE(TAG, "Failed to update display");
-                display_deinit();
-                vTaskDelete(NULL);
-                return;
-            }
+    snprintf(datetime_str, sizeof(datetime_str),
+                "%02d-%02d-%04d\n  %02d:%02d:%02d",
+                timeinfo.tm_mday,
+                timeinfo.tm_mon + 1,
+                timeinfo.tm_year + 1900,
+                timeinfo.tm_hour,
+                timeinfo.tm_min,
+                timeinfo.tm_sec);
 
-            ESP_LOGI(TAG, "Display updated: %s", texts[i]);
+    /* Clear framebuffer */
+    display_clear();
 
-            vTaskDelay(pdMS_TO_TICKS(5000));
-        }
+    display_draw_text(0, 0, datetime_str, 0);
+
+    /* Update physical display */
+    if (display_update() != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to update display");
+        display_deinit();
+        vTaskDelete(NULL);
+        return;
     }
 
-    /* Put display to sleep */
+    ESP_LOGI(TAG, "Display updated: %s", datetime_str);
+
+
     display_sleep();
 
     ESP_LOGI(TAG, "Display sequence completed");
