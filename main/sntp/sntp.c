@@ -1,3 +1,4 @@
+#include <sdkconfig.h>
 #include <freertos/FreeRTOS.h>
 #include <esp_system.h>
 #include <esp_log.h>
@@ -55,9 +56,10 @@ static void sync_time_with_sntp(void)
   const TickType_t sync_wait_ticks = pdMS_TO_TICKS(10000);
 
   if (!sntp_initialized) {
-    const esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+    const esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG(CONFIG_SNTP_TIME_SERVER);
     esp_netif_sntp_init(&config);
     sntp_initialized = true;
+    ESP_LOGI(TAG, "SNTP server: %s", CONFIG_SNTP_TIME_SERVER);
   } else {
     esp_netif_sntp_start();
   }
@@ -67,8 +69,8 @@ static void sync_time_with_sntp(void)
     time_t now = 0;
     struct tm timeinfo = {0};
     time(&now);
-    gmtime_r(&now, &timeinfo);
-    ESP_LOGI(TAG, "SNTP time (UTC): %04d-%02d-%02d %02d:%02d:%02d",
+    localtime_r(&now, &timeinfo);
+    ESP_LOGI(TAG, "SNTP time (local): %04d-%02d-%02d %02d:%02d:%02d",
              timeinfo.tm_year + 1900,
              timeinfo.tm_mon + 1,
              timeinfo.tm_mday,
@@ -83,6 +85,11 @@ static void sync_time_with_sntp(void)
 void sntp_task(void *pvParameter)
 {
   ESP_LOGI(TAG, "SNTP task started");
+
+  /* Set timezone immediately so localtime_r works correctly */
+  setenv("TZ", CONFIG_SNTP_TIMEZONE, 1);
+  tzset();
+  ESP_LOGI(TAG, "Timezone set to: %s", CONFIG_SNTP_TIMEZONE);
 
   /* Check if we've ever synced before and set the bit */
   if (sntp_check_first_sync_done()) {
