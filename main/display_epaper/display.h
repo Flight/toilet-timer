@@ -47,15 +47,6 @@ void display_clear(void);
 void display_draw_text(int x, int y, const char *text, uint8_t color);
 
 /**
- * @brief Draw centered text on the framebuffer
- *
- * @param y Y coordinate (pixels)
- * @param text UTF-8 encoded text string
- * @param color 0=white, 1=black
- */
-void display_draw_text_centered(int y, const char *text, uint8_t color);
-
-/**
  * @brief Get the width of a text string in pixels
  *
  * @param text UTF-8 encoded text string
