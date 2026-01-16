@@ -13,7 +13,7 @@ An ESP32-S3 based timer application for the LilyGo Mini E-Paper S3 development b
 
 ## Hardware Required
 
-* [LilyGo Mini E-Paper S3](https://www.lilygo.cc/) development board
+* [LilyGo Mini E-Paper S3](https://github.com/Xinyuan-LilyGO/LilyGO-Mini-Epaper) development board
   - ESP32-S3 microcontroller
   - 1.02" e-paper display (128x80 pixels)
   - Built-in USB-C for programming and power
@@ -124,4 +124,5 @@ epd_clear();
 ## Resources
 
 - [ESP-IDF Documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/)
-- [LilyGo GitHub](https://github.com/Xinyuan-LilyGO)
+- [LilyGo GitHub](https://github.com/Xinyuan-LilyGO/LilyGO-Mini-Epaper)
+- [Proper PIN map from Smoria](https://github.com/Xinyuan-LilyGO/LilyGO-Mini-Epaper/issues/7)
