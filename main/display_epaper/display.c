@@ -129,6 +129,16 @@ esp_err_t display_sleep(void)
     return epd_sleep();
 }
 
+esp_err_t display_wake(void)
+{
+    if (!s_display.initialized) {
+        ESP_LOGE(TAG, "Display not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    return epd_wake();
+}
+
 int display_get_width(void)
 {
     return CONFIG_DISPLAY_WIDTH;

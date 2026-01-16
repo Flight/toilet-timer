@@ -9,6 +9,7 @@
 #include <esp_log.h>
 #include <esp_sleep.h>
 #include <nvs_flash.h>
+#include <driver/gpio.h>
 
 #include "global_constants.h"
 
@@ -44,10 +45,21 @@ void app_main(void)
 
     /* Check wake-up cause */
     esp_sleep_wakeup_cause_t wakeup_cause = esp_sleep_get_wakeup_cause();
+    bool gpio4_wakeup = false;
     switch (wakeup_cause) {
-        case ESP_SLEEP_WAKEUP_EXT1:
+        case ESP_SLEEP_WAKEUP_EXT1: {
+            uint64_t wakeup_gpio_mask = esp_sleep_get_ext1_wakeup_status();
             ESP_LOGI(TAG, "Wake-up from deep sleep (EXT1 - GPIO button)");
-            ESP_LOGI(TAG, "Wake-up GPIO mask: 0x%llx", esp_sleep_get_ext1_wakeup_status());
+            ESP_LOGI(TAG, "Wake-up GPIO mask: 0x%llx", wakeup_gpio_mask);
+            /* Check if GPIO4 triggered the wake-up */
+            if (wakeup_gpio_mask & (1ULL << GPIO_NUM_4)) {
+                gpio4_wakeup = true;
+                ESP_LOGI(TAG, "GPIO4 triggered wake-up");
+            }
+            break;
+        }
+        case ESP_SLEEP_WAKEUP_TIMER:
+            ESP_LOGI(TAG, "Wake-up from deep sleep (timer - 24h periodic)");
             break;
         case ESP_SLEEP_WAKEUP_UNDEFINED:
         default:
@@ -66,6 +78,11 @@ void app_main(void)
     }
 
     global_event_group = xEventGroupCreate();
+
+    /* Set GPIO4 wake-up bit if GPIO4 triggered the wake */
+    if (gpio4_wakeup) {
+        xEventGroupSetBits(global_event_group, IS_GPIO4_WAKEUP);
+    }
 
     // xTaskCreatePinnedToCore(&system_state_task, "System State", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(&show_messages_task, "Show Messages", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL, 1);
