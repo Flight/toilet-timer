@@ -43,7 +43,7 @@ menu "DONGLE GPIO SETTINGS"
       GPIO number (IOxx) for the right button.
 endmenu
 
-menu "E-PAPER DISPLAY SETTINGS"
+menu "DONGLE E-PAPER DISPLAY SETTINGS"
   config EPD_PIN_MOSI
     int "E-Paper MOSI GPIO number"
     range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
@@ -134,4 +134,24 @@ menu "DONGLE OTA UPDATE SETTINGS"
     help
       URL of server which hosts the ESP32 firmware image.
       Use http://127.0.0.1:5001/toilet-timer.bin for local testing.
+endmenu
+
+menu "DONGLE SNTP TIME SETTINGS"
+  config SNTP_TIME_SERVER
+    string "SNTP server address"
+    default "pool.ntp.org"
+    help
+      Hostname or IP address of the NTP server to sync time from.
+
+  config SNTP_TIMEZONE
+    string "Timezone (POSIX format)"
+    default "CET-1CEST,M3.5.0,M10.5.0/3"
+    help
+      Timezone in POSIX format. Examples:
+      - Amsterdam/Europe: CET-1CEST,M3.5.0,M10.5.0/3
+      - Kyiv/Ukraine: EET-2EEST,M3.5.0/3,M10.5.0/4
+      - London/UK: GMT0BST,M3.5.0/1,M10.5.0
+      - New York/US Eastern: EST5EDT,M3.2.0,M11.1.0
+      - Los Angeles/US Pacific: PST8PDT,M3.2.0,M11.1.0
+      - UTC: UTC0
 endmenu
