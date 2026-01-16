@@ -13,6 +13,7 @@
 #include "../global_event_group.h"
 #include "../display_epaper/display.h"
 #include "../deep_sleep/deep_sleep.h"
+#include "../sntp/sntp.h"
 #include "show_messages.h"
 
 static const char *TAG = "show_messages";
@@ -26,10 +27,16 @@ void show_messages_task(void *pvParameter)
         vTaskDelete(NULL);
     }
 
-    /* Wait for SNTP time sync to complete */
-    ESP_LOGI(TAG, "Waiting for SNTP sync...");
-    xEventGroupWaitBits(global_event_group, IS_SNTP_SYNC_DONE, pdFALSE, pdTRUE, portMAX_DELAY);
-    ESP_LOGI(TAG, "SNTP sync done, showing date/time");
+    /* Check if we've synced before - if so, use saved time immediately */
+    if (sntp_check_first_sync_done()) {
+        ESP_LOGI(TAG, "First sync was done before, using saved time immediately");
+    } else {
+        /* Wait for SNTP time sync to complete on first boot */
+        ESP_LOGI(TAG, "First boot, waiting for SNTP sync...");
+        xEventGroupWaitBits(global_event_group, IS_SNTP_SYNC_DONE, pdFALSE, pdTRUE, portMAX_DELAY);
+        ESP_LOGI(TAG, "SNTP sync done");
+    }
+    ESP_LOGI(TAG, "Showing date/time");
 
     char datetime_str[64];
 
@@ -67,6 +74,19 @@ void show_messages_task(void *pvParameter)
 
     ESP_LOGI(TAG, "Display sequence completed");
 
+    /* Wait for OTA check and SNTP sync to complete, with 1 minute timeout */
+    ESP_LOGI(TAG, "Waiting for OTA check and SNTP sync to complete (1 min timeout)...");
+    const TickType_t timeout_ticks = pdMS_TO_TICKS(60000);
+    EventBits_t bits = xEventGroupWaitBits(global_event_group, IS_OTA_CHECK_DONE | IS_SNTP_SYNC_DONE, pdFALSE, pdTRUE, timeout_ticks);
+
+    /* If OTA update is running, wait indefinitely for it to complete */
+    if (bits & IS_OTA_UPDATE_RUNNING) {
+        ESP_LOGI(TAG, "OTA update in progress, waiting for it to complete...");
+        xEventGroupWaitBits(global_event_group, IS_OTA_CHECK_DONE, pdFALSE, pdTRUE, portMAX_DELAY);
+    }
+
+    ESP_LOGI(TAG, "Entering deep sleep");
+
     /* Configure deep sleep wake-up */
     if (deep_sleep_configure_wakeup() != ESP_OK) {
         ESP_LOGE(TAG, "Failed to configure deep sleep wake-up");
@@ -74,7 +94,7 @@ void show_messages_task(void *pvParameter)
     }
 
     /* Enter deep sleep - device will restart on wake-up */
-    // deep_sleep_enter();
+    deep_sleep_enter();
 
     vTaskDelete(NULL);
 }
