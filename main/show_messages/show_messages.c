@@ -12,6 +12,7 @@
 #include "../global_constants.h"
 #include "../global_event_group.h"
 #include "../display_epaper/display.h"
+#include "../deep_sleep/deep_sleep.h"
 #include "show_messages.h"
 
 static const char *TAG = "show_messages";
@@ -23,7 +24,6 @@ void show_messages_task(void *pvParameter)
     if (display_init() != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize display");
         vTaskDelete(NULL);
-        return;
     }
 
     /* Wait for SNTP time sync to complete */
@@ -66,6 +66,15 @@ void show_messages_task(void *pvParameter)
     display_sleep();
 
     ESP_LOGI(TAG, "Display sequence completed");
+
+    /* Configure deep sleep wake-up */
+    if (deep_sleep_configure_wakeup() != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to configure deep sleep wake-up");
+        vTaskDelete(NULL);
+    }
+
+    /* Enter deep sleep - device will restart on wake-up */
+    // deep_sleep_enter();
 
     vTaskDelete(NULL);
 }
