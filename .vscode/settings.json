@@ -3,16 +3,19 @@
   "idf.openOcdConfigs": [
     "board/esp32s3-builtin.cfg"
   ],
-  "idf.port": "/dev/tty.usbmodem11101",
+  "idf.port": "/dev/tty.usbmodem2101",
   "idf.currentSetup": "~/.espressif/v5.5.2/esp-idf",
   "idf.customExtraVars": {
-    "IDF_TARGET": "esp32s3"
+    "OPENOCD_SCRIPTS": "/Users/flight/.espressif/tools/openocd-esp32/v0.12.0-esp32-20241016/openocd-esp32/share/openocd/scripts",
+    "ESP_ROM_ELF_DIR": "/Users/flight/.espressif/tools/esp-rom-elfs/20241011/",
+    "IDF_TARGET": "esp32s3",
+    "OPENOCD_USB_ADAPTER_LOCATION": "2-1"
   },
-  "clangd.path": "~/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin/clangd",
+  "clangd.path": "/Users/flight/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin/clangd",
   "clangd.arguments": [
     "--background-index",
-    "--query-driver=~/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20251107/xtensa-esp-elf/bin/xtensa-esp32s3-elf-gcc",
-    "--compile-commands-dir=~/Library/Mobile Documents/com~apple~CloudDocs/esp32/toiler-timer/build"
+    "--query-driver=**",
+    "--compile-commands-dir=/Users/flight/toilet-timer/build"
   ],
   "idf.flashType": "UART"
 }
