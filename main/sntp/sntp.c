@@ -50,5 +50,8 @@ void sntp_task(void *pvParameter)
   ESP_LOGI(TAG, "Wi-Fi connected, syncing time with SNTP");
   sync_time_with_sntp();
 
+  xEventGroupSetBits(global_event_group, IS_SNTP_SYNC_DONE);
+  ESP_LOGI(TAG, "SNTP sync done");
+
   vTaskDelete(NULL);
 }

@@ -118,6 +118,11 @@ void wifi_task(void *pvParameter)
         vTaskDelay(pdMS_TO_TICKS(1000));
       }
 
+      if (!wifi_should_reconnect) {
+        ESP_LOGI(TAG, "Wi-Fi task exiting");
+        vTaskDelete(NULL);
+      }
+
       ESP_LOGI(TAG, "Disconnected, waiting for reconnection");
     }
 

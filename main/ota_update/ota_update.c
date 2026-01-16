@@ -13,7 +13,6 @@
 
 #include "ota_update.h"
 #include "global_event_group.h"
-#include "wifi/wifi.h"
 
 #define FIRMWARE_UPGRADE_URL CONFIG_ESP32_FIRMWARE_UPGRADE_URL
 #define HASH_LEN 32
@@ -269,11 +268,11 @@ void ota_update_task(void *pvParameter)
   check_for_esp32_updates();
   xEventGroupClearBits(global_event_group, IS_OTA_UPDATE_RUNNING);
 
-  ESP_LOGI(TAG, "OTA check completed, disconnecting Wi-Fi");
-  wifi_stop();
+  ESP_LOGI(TAG, "OTA check completed");
 #else
   ESP_LOGW(TAG, "OTA Updates disabled in SDK config");
 #endif
 
+  xEventGroupSetBits(global_event_group, IS_OTA_CHECK_DONE);
   vTaskDelete(NULL);
 }

@@ -25,6 +25,17 @@ static const char *TAG = "toilet_timer";
 
 EventGroupHandle_t global_event_group;
 
+static void wifi_disconnect_task(void *pvParameter)
+{
+    ESP_LOGI(TAG, "Waiting for OTA check and SNTP sync to complete...");
+    xEventGroupWaitBits(global_event_group, IS_OTA_CHECK_DONE | IS_SNTP_SYNC_DONE, pdFALSE, pdTRUE, portMAX_DELAY);
+
+    ESP_LOGI(TAG, "OTA and SNTP done, disconnecting Wi-Fi");
+    wifi_stop();
+
+    vTaskDelete(NULL);
+}
+
 void app_main(void)
 {
     ESP_LOGI(TAG, "Starting Toilet Timer");
@@ -47,4 +58,5 @@ void app_main(void)
     xTaskCreatePinnedToCore(&sntp_task, "SNTP", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL, 1);
     // xTaskCreatePinnedToCore(&system_state_task, "System State", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(&ota_update_task, "OTA Update", configMINIMAL_STACK_SIZE * 8, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(&wifi_disconnect_task, "Wi-Fi Disconnect", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL, 1);
 }
