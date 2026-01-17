@@ -19,7 +19,7 @@ There's no power outlet in the bathroom, so it needed to be battery-powered. Hen
 
 ## Features
 
-- E-paper display (128x80 resolution) - retains image with zero power
+- E-paper display (80x128 resolution) - retains image with zero power
 - Deep sleep mode for long battery life
 - Single button to mark litter change
 - SNTP time sync over Wi-Fi (connects only when needed)
@@ -30,7 +30,7 @@ There's no power outlet in the bathroom, so it needed to be battery-powered. Hen
 
 * [LilyGo Mini E-Paper S3](https://github.com/Xinyuan-LilyGO/LilyGO-Mini-Epaper) development board
   - ESP32-S3 microcontroller
-  - 1.02" e-paper display (128x80 pixels)
+  - 1.02" e-paper display (80x128 pixels)
   - Built-in USB-C for programming and power
 * USB-C cable
 
@@ -75,44 +75,17 @@ idf.py flash monitor
 
 To exit the serial monitor, press `Ctrl+]`.
 
-## Development
-
-### E-Paper Display Driver
-
-The e-paper display driver is implemented in [main/epd_driver.c](main/epd_driver.c) and provides a clean API:
-
-```c
-// Initialize display
-epd_config_t config = {
-    .pin_mosi = 35,
-    .pin_clk = 36,
-    .pin_cs = 37,
-    .pin_dc = 34,
-    .pin_rst = 38,
-    .pin_busy = 39,
-    .width = 128,
-    .height = 80,
-};
-epd_init(&config);
-
-// Display a buffer
-uint8_t framebuffer[128 * 80 / 8];
-epd_display_buffer(framebuffer, sizeof(framebuffer));
-
-// Clear display to white
-epd_clear();
-```
-
-### Pin Configuration (LilyGo Mini E-Paper S3)
+## Pin Configuration (LilyGo Mini E-Paper S3)
 
 | Function | GPIO | Description |
 |----------|------|-------------|
-| MOSI     | 35   | SPI data out |
-| CLK      | 36   | SPI clock |
-| CS       | 37   | Chip select |
-| DC       | 34   | Data/Command |
-| RST      | 38   | Reset |
-| BUSY     | 39   | Busy status |
+| MOSI     | 15   | SPI data out |
+| CLK      | 14   | SPI clock |
+| CS       | 13   | Chip select |
+| DC       | 12   | Data/Command |
+| RST      | 11   | Reset |
+| BUSY     | 10   | Busy status |
+| POWER    | 42   | Power enable (needed while powering from the battery) |
 
 ## Local OTA Update
 
