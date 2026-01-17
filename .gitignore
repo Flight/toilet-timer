@@ -77,3 +77,13 @@ Desktop.ini
 
 sdkconfig*
 !sdkconfig.default
+
+# certs/keys
+*.key
+*.pem
+*.crt
+*.cer
+*.p12
+*.pfx
+*.der
+*.csr
