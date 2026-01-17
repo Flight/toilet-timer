@@ -39,12 +39,24 @@ There's no power outlet in the bathroom, so it needed to be battery-powered. Hen
 ```
 toilet-timer/
 ├── main/
-│   ├── main.c           # Main application logic
-│   ├── epd_driver.c     # E-paper display driver implementation
-│   ├── epd_driver.h     # E-paper display driver header
-│   └── CMakeLists.txt   # Component build configuration
+│   ├── main.c                  # Main application logic
+│   ├── global_constants.h      # Global configuration constants
+│   ├── global_event_group.h    # FreeRTOS event group definitions
+│   ├── battery_level/          # Battery voltage monitoring
+│   ├── deep_sleep/             # Deep sleep management
+│   ├── display_epaper/         # E-paper display driver and graphics
+│   │   ├── driver/             # Low-level GDEW0102T4 driver
+│   │   └── fonts/              # Bitmap fonts
+│   ├── nvs_utils/              # Non-volatile storage utilities
+│   ├── ota_update/             # Over-the-air firmware updates
+│   ├── show_messages/          # Display message formatting
+│   ├── system_state/           # System state management
+│   ├── time_utils/             # Time and date utilities
+│   ├── trigger/                # Button trigger handling
+│   └── wifi/                   # Wi-Fi connection management
+├── local_ota_server/           # Local OTA update server files
 ├── README.md
-└── CMakeLists.txt       # Project build configuration
+└── CMakeLists.txt              # Project build configuration
 ```
 
 ## Setup and Build
