@@ -3,13 +3,28 @@
 
 # Toilet Timer
 
-An ESP32-S3 based timer application for the LilyGo Mini E-Paper S3 development board featuring a 1.02" 128x80 monochrome e-paper display.
+A battery-powered cat litter box change tracker built on the LilyGo Mini E-Paper S3.
+
+![Photo of usage](example.jpeg)
+
+## Why?
+
+![Paper and pen](before.jpeg)
+
+We completely change the cat's litter box about once a week (with regular cleaning in between). The problem was we could never remember when the last change was. We used to write the date on toilet paper with a pen, but then you'd have to check your phone to figure out how many days ago that was.
+
+This device shows the last change date and updates at midnight to display how many days have passed ("Today", "Yesterday", "2 days ago", etc.). Press the button to reset the date to today and the counter back to "Today".
+
+There's no power outlet in the bathroom, so it needed to be battery-powered. Hence the e-ink display + deep sleep combination.
 
 ## Features
 
-- E-paper display support (128x80 resolution)
-- Modular e-paper driver architecture
-- Low power consumption with e-paper display retention
+- E-paper display (128x80 resolution) - retains image with zero power
+- Deep sleep mode for long battery life
+- Single button to mark litter change
+- SNTP time sync over Wi-Fi (connects only when needed)
+- OTA firmware updates
+- Shows days elapsed since last change in Ukrainian
 
 ## Hardware Required
 

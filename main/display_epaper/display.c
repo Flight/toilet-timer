@@ -11,6 +11,7 @@
 #include "graphics.h"
 #include "global_constants.h"
 #include "esp_log.h"
+#include "driver/gpio.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -147,4 +148,19 @@ int display_get_width(void)
 int display_get_height(void)
 {
     return CONFIG_DISPLAY_HEIGHT;
+}
+
+void display_enable_power_early(void)
+{
+    /* Enable e-paper display power pin early for stable battery operation */
+    gpio_config_t pwr_conf = {
+        .pin_bit_mask = (1ULL << CONFIG_EPD_PIN_POWER),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&pwr_conf);
+    gpio_set_level(CONFIG_EPD_PIN_POWER, 1);
+    ESP_LOGI(TAG, "Display power pin %d enabled early", CONFIG_EPD_PIN_POWER);
 }
