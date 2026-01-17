@@ -19,11 +19,12 @@
 
 static const char *TAG = "OTA Update";
 
-char *global_running_firmware_version = "Pending";
+static char *s_running_firmware_version = "Pending";
 
-nvs_handle_t ota_storage_handle;
-char *NVS_OTA_STORAGE_NAMESPACE = "ota_info";
-char *NVS_OTA_FIRMWARE_HASH_KEY = "firmware_hash";
+static nvs_handle_t s_ota_nvs_handle;
+
+#define NVS_OTA_NAMESPACE "ota_info"
+#define NVS_OTA_HASH_KEY "firmware_hash"
 
 static uint8_t esp32_mac_address[6] = {0};
 static char esp32_mac_address_string[18];
@@ -57,8 +58,8 @@ static void check_current_firmware(void)
   ESP_LOGI(TAG, "Checking current firmware...");
 
   // Read the stored hash
-  nvs_open(NVS_OTA_STORAGE_NAMESPACE, NVS_READWRITE, &ota_storage_handle);
-  esp_err_t err = nvs_get_blob(ota_storage_handle, NVS_OTA_FIRMWARE_HASH_KEY, &sha_256_stored, &stored_hash_size);
+  nvs_open(NVS_OTA_NAMESPACE, NVS_READWRITE, &s_ota_nvs_handle);
+  esp_err_t err = nvs_get_blob(s_ota_nvs_handle, NVS_OTA_HASH_KEY, &sha_256_stored, &stored_hash_size);
   if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND)
   {
     ESP_LOGE(TAG, "Failed to read hash from NVS: %s", esp_err_to_name(err));
@@ -78,8 +79,8 @@ static void check_current_firmware(void)
     // If the stored hash is not the same as the factory one, save the current hash
     if (stored_hash_size != HASH_LEN || memcmp(sha_256_current, sha_256_stored, HASH_LEN) != 0)
     {
-      nvs_set_blob(ota_storage_handle, NVS_OTA_FIRMWARE_HASH_KEY, &sha_256_current, HASH_LEN);
-      nvs_commit(ota_storage_handle);
+      nvs_set_blob(s_ota_nvs_handle, NVS_OTA_HASH_KEY, &sha_256_current, HASH_LEN);
+      nvs_commit(s_ota_nvs_handle);
       ESP_LOGI(TAG, "Stored new firmware hash in NVS");
     }
     return;
@@ -121,8 +122,8 @@ static void get_running_firmware_info(void)
 
   if (esp_ota_get_partition_description(running_partition, &running_app_info) == ESP_OK)
   {
-    global_running_firmware_version = running_app_info.version;
-    ESP_LOGI(TAG, "Running firmware version: %s", global_running_firmware_version);
+    s_running_firmware_version = running_app_info.version;
+    ESP_LOGI(TAG, "Running firmware version: %s", s_running_firmware_version);
   }
 }
 
@@ -135,10 +136,10 @@ static esp_err_t validate_image_header(esp_app_desc_t *new_app_info)
     return ESP_ERR_INVALID_ARG;
   }
 
-  ESP_LOGI(TAG, "Running firmware version: %s", global_running_firmware_version);
+  ESP_LOGI(TAG, "Running firmware version: %s", s_running_firmware_version);
   ESP_LOGI(TAG, "New firmware version: %s", new_app_info->version);
 
-  if (strcmp(new_app_info->version, global_running_firmware_version) == 0)
+  if (strcmp(new_app_info->version, s_running_firmware_version) == 0)
   {
     ESP_LOGW(TAG, "Current version matches new version. Skipping update.");
     return ESP_FAIL;
@@ -230,12 +231,12 @@ static void check_for_esp32_updates(void)
       esp_partition_get_sha256(boot_partition, sha_256_boot);
       print_sha256(sha_256_boot, "New firmware hash:");
 
-      nvs_set_blob(ota_storage_handle, NVS_OTA_FIRMWARE_HASH_KEY, &sha_256_boot, HASH_LEN);
-      nvs_commit(ota_storage_handle);
+      nvs_set_blob(s_ota_nvs_handle, NVS_OTA_HASH_KEY, &sha_256_boot, HASH_LEN);
+      nvs_commit(s_ota_nvs_handle);
       ESP_LOGI(TAG, "Stored new firmware hash in NVS");
     }
 
-    nvs_close(ota_storage_handle);
+    nvs_close(s_ota_nvs_handle);
     ESP_LOGI(TAG, "Restarting to new firmware...");
     esp_restart();
   }

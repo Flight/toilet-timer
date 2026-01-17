@@ -9,7 +9,6 @@
 #include <esp_log.h>
 #include <esp_sleep.h>
 #include <nvs_flash.h>
-#include <driver/gpio.h>
 
 #include "global_constants.h"
 
@@ -28,20 +27,12 @@ static const char *TAG = "toilet_timer";
 
 EventGroupHandle_t global_event_group;
 
-static void wifi_disconnect_task(void *pvParameter)
-{
-    ESP_LOGI(TAG, "Waiting for OTA check and SNTP sync to complete...");
-    xEventGroupWaitBits(global_event_group, IS_OTA_CHECK_DONE | IS_SNTP_SYNC_DONE, pdFALSE, pdTRUE, portMAX_DELAY);
-
-    ESP_LOGI(TAG, "OTA and SNTP done, disconnecting Wi-Fi");
-    wifi_stop();
-
-    vTaskDelete(NULL);
-}
-
 void app_main(void)
 {
     ESP_LOGI(TAG, "Starting Toilet Timer");
+
+    /* Enable display power immediately for battery operation */
+    display_enable_power_early();
 
     /* Check wake-up cause */
     esp_sleep_wakeup_cause_t wakeup_cause = esp_sleep_get_wakeup_cause();

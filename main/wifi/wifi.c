@@ -137,3 +137,14 @@ void wifi_stop(void)
   esp_wifi_disconnect();
   esp_wifi_stop();
 }
+
+void wifi_disconnect_task(void *pvParameter)
+{
+    ESP_LOGI(TAG, "Waiting for OTA check and SNTP sync to complete...");
+    xEventGroupWaitBits(global_event_group, IS_OTA_CHECK_DONE | IS_SNTP_SYNC_DONE, pdFALSE, pdTRUE, portMAX_DELAY);
+
+    ESP_LOGI(TAG, "OTA and SNTP done, disconnecting Wi-Fi");
+    wifi_stop();
+
+    vTaskDelete(NULL);
+}

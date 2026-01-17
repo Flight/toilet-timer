@@ -95,4 +95,11 @@ int display_get_width(void);
  */
 int display_get_height(void);
 
+/**
+ * @brief Enable display power pin early for stable battery operation
+ *
+ * Should be called before display_init() during early boot.
+ */
+void display_enable_power_early(void);
+
 #endif /* DISPLAY_H */
