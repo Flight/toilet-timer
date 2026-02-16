@@ -65,25 +65,26 @@ uint64_t time_utils_us_until_midnight(void)
     struct tm now_tm = {0};
     localtime_r(&now, &now_tm);
 
-    /* Create time for next midnight */
-    struct tm midnight_tm = now_tm;
-    midnight_tm.tm_hour = 0;
-    midnight_tm.tm_min = 0;
-    midnight_tm.tm_sec = 0;
-    midnight_tm.tm_mday += 1;
+    /* Target 1:00 AM to avoid multiple wake-ups from RTC drift.
+     * The ESP32's internal oscillator drifts ~27 min/day, so targeting
+     * midnight would cause early wake-ups followed by re-sleeps. */
+    struct tm target_tm = now_tm;
+    target_tm.tm_hour = 1;
+    target_tm.tm_min = 0;
+    target_tm.tm_sec = 0;
 
-    time_t midnight = mktime(&midnight_tm);
-
-    int64_t seconds_until_midnight = (int64_t)(midnight - now);
-
-    /* Ensure at least 1 minute */
-    if (seconds_until_midnight < 60) {
-        seconds_until_midnight = 60;
+    /* If it's already past 1:00 AM, target next day */
+    if (now_tm.tm_hour >= 1) {
+        target_tm.tm_mday += 1;
     }
 
-    ESP_LOGI(TAG, "Seconds until midnight: %lld", seconds_until_midnight);
+    time_t target = mktime(&target_tm);
 
-    return (uint64_t)seconds_until_midnight * 1000000ULL;
+    int64_t seconds_until_target = (int64_t)(target - now);
+
+    ESP_LOGI(TAG, "Seconds until 1:00 AM: %lld", seconds_until_target);
+
+    return (uint64_t)seconds_until_target * 1000000ULL;
 }
 
 const char *time_utils_get_days_suffix_uk(int days)
