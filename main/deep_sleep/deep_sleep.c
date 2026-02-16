@@ -53,7 +53,7 @@ esp_err_t deep_sleep_configure_wakeup(void)
         return err;
     }
 
-    ESP_LOGI(TAG, "Timer wake-up configured for next midnight");
+    ESP_LOGI(TAG, "Timer wake-up configured for next 1:00 AM");
 
     return ESP_OK;
 }
@@ -61,7 +61,7 @@ esp_err_t deep_sleep_configure_wakeup(void)
 void deep_sleep_enter(void)
 {
     ESP_LOGI(TAG, "Entering deep sleep mode...");
-    ESP_LOGI(TAG, "Wake-up: GPIO0/3/4 LOW, or at midnight");
+    ESP_LOGI(TAG, "Wake-up: GPIO0/3/4 LOW, or at 1:00 AM");
 
     vTaskDelay(pdMS_TO_TICKS(100));
     esp_deep_sleep_start();

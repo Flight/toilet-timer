@@ -65,25 +65,38 @@ uint64_t time_utils_us_until_midnight(void)
     struct tm now_tm = {0};
     localtime_r(&now, &now_tm);
 
-    /* Create time for next midnight */
-    struct tm midnight_tm = now_tm;
-    midnight_tm.tm_hour = 0;
-    midnight_tm.tm_min = 0;
-    midnight_tm.tm_sec = 0;
-    midnight_tm.tm_mday += 1;
+    /* Target 1:00 AM for the daily OTA check wake-up.
+     * The ESP32's internal oscillator drifts ~27 min/day, causing early
+     * wake-ups. After SNTP corrects the time, the remaining sleep time
+     * can be very short (seconds/minutes), causing repeated wake-ups.
+     * To prevent this, if the time until target is under 1 hour,
+     * we skip to the next day's 1:00 AM instead. */
+    struct tm target_tm = now_tm;
+    target_tm.tm_hour = 1;
+    target_tm.tm_min = 0;
+    target_tm.tm_sec = 0;
 
-    time_t midnight = mktime(&midnight_tm);
-
-    int64_t seconds_until_midnight = (int64_t)(midnight - now);
-
-    /* Ensure at least 1 minute */
-    if (seconds_until_midnight < 60) {
-        seconds_until_midnight = 60;
+    /* If it's already past 1:00 AM, target next day */
+    if (now_tm.tm_hour >= 1) {
+        target_tm.tm_mday += 1;
     }
 
-    ESP_LOGI(TAG, "Seconds until midnight: %lld", seconds_until_midnight);
+    time_t target = mktime(&target_tm);
 
-    return (uint64_t)seconds_until_midnight * 1000000ULL;
+    int64_t seconds_until_target = (int64_t)(target - now);
+
+    /* If less than 1 hour until target, skip to next day to avoid
+     * multiple short wake-sleep cycles from RTC drift correction */
+    if (seconds_until_target < 3600) {
+        ESP_LOGI(TAG, "Only %lld seconds until 1:00 AM, targeting next day", seconds_until_target);
+        target_tm.tm_mday += 1;
+        target = mktime(&target_tm);
+        seconds_until_target = (int64_t)(target - now);
+    }
+
+    ESP_LOGI(TAG, "Seconds until 1:00 AM: %lld", seconds_until_target);
+
+    return (uint64_t)seconds_until_target * 1000000ULL;
 }
 
 const char *time_utils_get_days_suffix_uk(int days)

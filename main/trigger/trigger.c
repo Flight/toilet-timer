@@ -91,7 +91,17 @@ void trigger_format_datetime(char *buf, size_t buf_size, int days_since_trigger,
         struct tm trigger_tm = {0};
         localtime_r(&trigger_timestamp, &trigger_tm);
 
-        if (days_since_trigger == 0) {
+        if (days_since_trigger < 0) {
+            /* Time not yet synced - show only saved date/time */
+            snprintf(buf, buf_size,
+                     "\n %02d-%02d-%04d\n  %02d:%02d:%02d",
+                     trigger_tm.tm_mday,
+                     trigger_tm.tm_mon + 1,
+                     trigger_tm.tm_year + 1900,
+                     trigger_tm.tm_hour,
+                     trigger_tm.tm_min,
+                     trigger_tm.tm_sec);
+        } else if (days_since_trigger == 0) {
             snprintf(buf, buf_size,
                      "\n %02d-%02d-%04d\n  %02d:%02d:%02d\n  Сьогодні",
                      trigger_tm.tm_mday,

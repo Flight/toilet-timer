@@ -102,22 +102,39 @@ void show_messages_task(void *pvParameter)
 
     ESP_LOGI(TAG, "Display updated: %s", datetime_str);
 
-    /* On first boot, wait for SNTP sync */
+    /* On first boot, show saved date immediately, then update after SNTP sync */
     if (first_boot) {
+        /* Show the saved trigger date/time without relative days (time not synced yet) */
+        trigger_timestamp = trigger_get_last_timestamp();
+        if (trigger_timestamp != 0) {
+            trigger_format_datetime(datetime_str, sizeof(datetime_str), -1, trigger_timestamp);
+            display_clear();
+            display_draw_text(0, 0, datetime_str, 0);
+            if (display_update() != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to update display with saved time");
+            } else {
+                ESP_LOGI(TAG, "Display updated with saved time (no days): %s", datetime_str);
+            }
+        }
+
         ESP_LOGI(TAG, "Waiting for SNTP sync...");
         xEventGroupWaitBits(global_event_group, IS_SNTP_SYNC_DONE, pdFALSE, pdTRUE, portMAX_DELAY);
 
         time(&now);
-        get_trigger_info(is_gpio4_wakeup, now, &days_since_trigger, &trigger_timestamp);
-        trigger_format_datetime(datetime_str, sizeof(datetime_str), days_since_trigger, trigger_timestamp);
+        if (time_utils_is_valid()) {
+            get_trigger_info(is_gpio4_wakeup, now, &days_since_trigger, &trigger_timestamp);
+            trigger_format_datetime(datetime_str, sizeof(datetime_str), days_since_trigger, trigger_timestamp);
 
-        display_clear();
-        display_draw_text(0, 0, datetime_str, 0);
+            display_clear();
+            display_draw_text(0, 0, datetime_str, 0);
 
-        if (display_update() != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to update display with time");
+            if (display_update() != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to update display with time");
+            } else {
+                ESP_LOGI(TAG, "Display updated with synced time: %s", datetime_str);
+            }
         } else {
-            ESP_LOGI(TAG, "Display updated with synced time: %s", datetime_str);
+            ESP_LOGW(TAG, "SNTP sync completed but time still invalid, skipping days display");
         }
     }
 
