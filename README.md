@@ -21,9 +21,10 @@ There's no power outlet in the bathroom, so it needed to be battery-powered. Hen
 
 - E-paper display (80x128 resolution) - retains image with zero power
 - Deep sleep mode for long battery life
-- Single button to mark litter change
-- SNTP time sync over Wi-Fi (connects only when needed)
-- OTA firmware updates
+- Single button (GPIO4) to mark litter change and reset the counter
+- Wi-Fi connects only on GPIO4 or GPIO3 button press — never on timer or power-on wake-up
+- SNTP time sync and OTA firmware updates triggered by Wi-Fi connection
+- Daily 1:00 AM wake-up to refresh the display (no Wi-Fi, no sync)
 - Shows days elapsed since last change in Ukrainian
 
 ## Hardware Required
@@ -89,15 +90,17 @@ To exit the serial monitor, press `Ctrl+]`.
 
 ## Pin Configuration (LilyGo Mini E-Paper S3)
 
-| Function | GPIO | Description |
-|----------|------|-------------|
-| MOSI     | 15   | SPI data out |
-| CLK      | 14   | SPI clock |
-| CS       | 13   | Chip select |
-| DC       | 12   | Data/Command |
-| RST      | 11   | Reset |
-| BUSY     | 10   | Busy status |
-| POWER    | 42   | Power enable (needed while powering from the battery) |
+| Function        | GPIO | Description |
+|-----------------|------|-------------|
+| MOSI            | 15   | SPI data out |
+| CLK             | 14   | SPI clock |
+| CS              | 13   | Chip select |
+| DC              | 12   | Data/Command |
+| RST             | 11   | Reset |
+| BUSY            | 10   | Busy status |
+| POWER           | 42   | Power enable (needed while powering from the battery) |
+| TIMER RESET BTN | 4    | Wake-up + reset timer to today (active LOW) |
+| SYNC/UPDATE BTN | 3    | Wake-up + trigger Wi-Fi sync and OTA check without resetting timer (active LOW) |
 
 ## Local OTA Update
 

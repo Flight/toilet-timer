@@ -118,6 +118,21 @@ menu "DONGLE WI-FI SETTINGS"
     default "wifi_password"
     help
       Wi-Fi password.
+
+  config WIFI_DAILY_SYNC
+    bool "Connect Wi-Fi daily at 1:00 AM"
+    default n
+    help
+      When enabled, the device connects to Wi-Fi on every daily 1:00 AM timer
+      wake-up to sync time and check for firmware updates.
+
+      Disabled (default): Wi-Fi connects only when the user presses a button
+      (GPIO3 or GPIO4). Time drift accumulates between button presses (~30 min/day,
+      so ~3.5 hours per week without a button press).
+
+      Enabled: Time is corrected every night, keeping drift under ~30 minutes.
+      Firmware updates are also checked daily. Power consumption is significantly
+      higher due to the nightly Wi-Fi session.
 endmenu
 
 menu "DONGLE OTA UPDATE SETTINGS"

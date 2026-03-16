@@ -15,8 +15,7 @@
 
 static const char *TAG = "deep_sleep";
 
-/* Wake-up GPIOs: GPIO0, GPIO3, GPIO4 */
-#define WAKEUP_GPIO_MASK ((1ULL << GPIO_NUM_0) | (1ULL << GPIO_NUM_3) | (1ULL << GPIO_NUM_4))
+#define WAKEUP_GPIO_MASK ((1ULL << CONFIG_BUTTON_PUSH_GPIO) | (1ULL << CONFIG_BUTTON_LEFT_GPIO) | (1ULL << CONFIG_BUTTON_RIGHT_GPIO))
 
 esp_err_t deep_sleep_configure_wakeup(void)
 {

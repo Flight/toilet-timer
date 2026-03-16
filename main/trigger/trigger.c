@@ -17,7 +17,7 @@
 
 static const char *TAG = "trigger";
 
-#define TRIGGER_GPIO GPIO_NUM_4
+#define TRIGGER_GPIO CONFIG_BUTTON_RIGHT_GPIO
 #define TRIGGER_DEBOUNCE_MS 200
 
 #define NVS_TRIGGER_NAMESPACE "trigger_info"

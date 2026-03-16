@@ -67,6 +67,12 @@ void wifi_task(void *pvParameter)
 {
   ESP_LOGI(TAG, "Wi-Fi task started");
 
+  if (!(xEventGroupGetBits(global_event_group) & IS_WIFI_AVAILABLE)) {
+    ESP_LOGI(TAG, "Wi-Fi not available for this wake-up, skipping");
+    vTaskDelete(NULL);
+    return;
+  }
+
   wifi_internal_event_group = xEventGroupCreate();
 
   esp_netif_init();
@@ -140,6 +146,12 @@ void wifi_stop(void)
 
 void wifi_disconnect_task(void *pvParameter)
 {
+    if (!(xEventGroupGetBits(global_event_group) & IS_WIFI_AVAILABLE)) {
+        ESP_LOGI(TAG, "Wi-Fi was not started, nothing to disconnect");
+        vTaskDelete(NULL);
+        return;
+    }
+
     ESP_LOGI(TAG, "Waiting for OTA check and SNTP sync to complete...");
     xEventGroupWaitBits(global_event_group, IS_OTA_CHECK_DONE | IS_SNTP_SYNC_DONE, pdFALSE, pdTRUE, portMAX_DELAY);
 

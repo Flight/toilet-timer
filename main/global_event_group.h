@@ -22,5 +22,7 @@ extern int global_battery_level;
 #define IS_SNTP_SYNC_DONE       BIT6
 #define IS_SNTP_FIRST_SYNC_DONE BIT7
 #define IS_GPIO4_WAKEUP         BIT8
+#define IS_WIFI_AVAILABLE       BIT9
+#define IS_GPIO3_WAKEUP         BIT10
 
 #endif /* GLOBAL_EVENT_GROUP_H */

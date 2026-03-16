@@ -74,6 +74,13 @@ void sntp_task(void *pvParameter)
         xEventGroupSetBits(global_event_group, IS_SNTP_FIRST_SYNC_DONE);
     }
 
+    if (!(xEventGroupGetBits(global_event_group) & IS_WIFI_AVAILABLE)) {
+        ESP_LOGI(TAG, "Wi-Fi not available, skipping time sync");
+        xEventGroupSetBits(global_event_group, IS_SNTP_SYNC_DONE);
+        vTaskDelete(NULL);
+        return;
+    }
+
     ESP_LOGI(TAG, "Waiting for Wi-Fi connection...");
     xEventGroupWaitBits(global_event_group, IS_WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 

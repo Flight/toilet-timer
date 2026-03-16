@@ -256,6 +256,13 @@ void ota_update_task(void *pvParameter)
 
 #ifdef CONFIG_IS_ESP32_FIRMWARE_UPGRADE_ENABLED
   ESP_LOGI(TAG, "OTA Updates enabled");
+  if (!(xEventGroupGetBits(global_event_group) & IS_WIFI_AVAILABLE)) {
+    ESP_LOGI(TAG, "Wi-Fi not available, skipping OTA check");
+    xEventGroupSetBits(global_event_group, IS_OTA_CHECK_DONE);
+    vTaskDelete(NULL);
+    return;
+  }
+
   ESP_LOGI(TAG, "Waiting for Wi-Fi connection...");
   xEventGroupWaitBits(global_event_group, IS_WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 

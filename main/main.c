@@ -37,20 +37,27 @@ void app_main(void)
     /* Check wake-up cause */
     esp_sleep_wakeup_cause_t wakeup_cause = esp_sleep_get_wakeup_cause();
     bool gpio4_wakeup = false;
+    bool gpio3_wakeup = false;
     switch (wakeup_cause) {
         case ESP_SLEEP_WAKEUP_EXT1: {
             uint64_t wakeup_gpio_mask = esp_sleep_get_ext1_wakeup_status();
             ESP_LOGI(TAG, "Wake-up from deep sleep (EXT1 - GPIO button)");
             ESP_LOGI(TAG, "Wake-up GPIO mask: 0x%llx", wakeup_gpio_mask);
-            /* Check if GPIO4 triggered the wake-up */
-            if (wakeup_gpio_mask & (1ULL << GPIO_NUM_4)) {
+            if (wakeup_gpio_mask & (1ULL << CONFIG_BUTTON_RIGHT_GPIO)) {
                 gpio4_wakeup = true;
-                ESP_LOGI(TAG, "GPIO4 triggered wake-up");
+                ESP_LOGI(TAG, "GPIO%d triggered wake-up", CONFIG_BUTTON_RIGHT_GPIO);
+            }
+            if (wakeup_gpio_mask & (1ULL << CONFIG_BUTTON_LEFT_GPIO)) {
+                gpio3_wakeup = true;
+                ESP_LOGI(TAG, "GPIO%d triggered wake-up", CONFIG_BUTTON_LEFT_GPIO);
             }
             break;
         }
         case ESP_SLEEP_WAKEUP_TIMER:
-            ESP_LOGI(TAG, "Wake-up from deep sleep (timer - 24h periodic)");
+            ESP_LOGI(TAG, "Wake-up from deep sleep (timer - 1:00 AM)");
+#ifdef CONFIG_WIFI_DAILY_SYNC
+            ESP_LOGI(TAG, "Daily Wi-Fi sync enabled");
+#endif
             break;
         case ESP_SLEEP_WAKEUP_UNDEFINED:
         default:
@@ -70,9 +77,18 @@ void app_main(void)
 
     global_event_group = xEventGroupCreate();
 
-    /* Set GPIO4 wake-up bit if GPIO4 triggered the wake */
     if (gpio4_wakeup) {
         xEventGroupSetBits(global_event_group, IS_GPIO4_WAKEUP);
+    }
+    if (gpio3_wakeup) {
+        xEventGroupSetBits(global_event_group, IS_GPIO3_WAKEUP);
+    }
+    bool wifi_available = gpio4_wakeup || gpio3_wakeup;
+#ifdef CONFIG_WIFI_DAILY_SYNC
+    wifi_available = wifi_available || (wakeup_cause == ESP_SLEEP_WAKEUP_TIMER);
+#endif
+    if (wifi_available) {
+        xEventGroupSetBits(global_event_group, IS_WIFI_AVAILABLE);
     }
 
     // xTaskCreatePinnedToCore(&system_state_task, "System State", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL, 1);
