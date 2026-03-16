@@ -124,6 +124,29 @@ To exit the serial monitor, press `Ctrl+]`.
 
 4. Build the project. If the build is successful, the `dongle.bin` file will appear in the `local_ota_server` folder.
 
+## Manually Correcting the Last-Change Date
+
+If you accidentally press the reset button, use the script in [set_manual_timestamp/](set_manual_timestamp/) to write a specific timestamp directly into the device's NVS (non-volatile storage) without flashing new firmware.
+
+```bash
+cd set_manual_timestamp
+
+# Preview — generates nvs_timestamp.bin without touching the device
+python3 set_timestamp.py "2026-03-13 11:00"
+
+# Generate + flash in one step
+python3 set_timestamp.py "2026-03-13 11:00" --flash /dev/cu.usbmodem*
+
+# Set to right now
+python3 set_timestamp.py now --flash /dev/cu.usbmodem*
+```
+
+The datetime is interpreted in your **local timezone**, which should match `CONFIG_SNTP_TIMEZONE` on the device.
+
+Accepted formats: `YYYY-MM-DD HH:MM`, `YYYY-MM-DD HH:MM:SS`, or `now`.
+
+> The script preserves the "time already synced" flag so the device won't show the *Connecting Wi-Fi…* screen on next boot. The OTA firmware hash is not preserved, but the firmware re-validates it harmlessly on the next button press.
+
 ## Resources
 
 - [ESP-IDF Documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/)
