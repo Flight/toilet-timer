@@ -1,11 +1,14 @@
 # API Quick Reference Guide
 
-## Display Module (`display.h`)
+## Display Module (`main/display_epaper/display.h`)
 
 High-level display interface with automatic framebuffer management.
+Coordinates are logical pixels after `CONFIG_DISPLAY_ROTATION`; (0,0) is the
+top-left corner as seen by the user. Color `0` is black, `1` is white.
 
 ### Initialization
 ```c
+void display_enable_power_early(void);  // call first thing in app_main()
 esp_err_t display_init(void);
 void display_deinit(void);
 ```
@@ -15,163 +18,104 @@ void display_deinit(void);
 // Clear framebuffer to white
 void display_clear(void);
 
-// Draw text at position
-void display_draw_text(int x, int y, const char *text, uint8_t color);
+// Draw text at position, with an integer zoom factor (1 = native 10x20 font)
+void display_draw_text(int x, int y, const char *text, uint8_t color, int scale);
 
-// Draw centered text
-void display_draw_text_centered(int y, const char *text, uint8_t color);
+// Draw text with every line centered horizontally
+void display_draw_text_centered(int y, const char *text, uint8_t color, int scale);
 
-// Measure text width
-int display_measure_text(const char *text);
+// Fill a rectangle
+void display_fill_rect(int x, int y, int width, int height, uint8_t color);
+
+// Measure text
+int display_measure_text(const char *text, int scale);   // widest line, pixels
+int display_text_height(const char *text, int scale);    // all lines, pixels
 ```
 
 ### Display Control
 ```c
-// Update physical display
-esp_err_t display_update(void);
+esp_err_t display_update(void);  // full refresh (~2 s)
+esp_err_t display_sleep(void);   // controller deep sleep + panel supply off
+esp_err_t display_wake(void);    // supply on + re-init
 
-// Enter deep sleep
-esp_err_t display_sleep(void);
-
-// Get dimensions
-int display_get_width(void);   // Returns 80
-int display_get_height(void);  // Returns 128
+int display_get_width(void);     // logical width (200)
+int display_get_height(void);    // logical height (200)
 ```
 
 ### Example Usage
 ```c
-#include "display.h"
-#include "config.h"
+#include "display_epaper/display.h"
 
 void app_main(void) {
-    // Initialize
+    display_enable_power_early();
     display_init();
 
-    // Draw text
     display_clear();
-    display_draw_text_centered(60, "Hello World!", 0);
+    display_draw_text_centered(40, "12", 0, 4);          // big number
+    display_draw_text_centered(130, "днів тому", 0, 1);  // caption
 
-    // Update and sleep
     display_update();
     display_sleep();
 }
 ```
 
-## Graphics Module (`graphics.h`)
+## Graphics Module (`main/display_epaper/graphics.h`)
 
-Low-level drawing primitives (typically not used directly by applications).
+Low-level drawing primitives on a raw framebuffer (used by the display module).
 
-### Initialization
 ```c
 void graphics_init(int width, int height);
-```
-
-### Drawing Functions
-```c
+int graphics_get_width(void);
+int graphics_get_height(void);
 void draw_pixel(uint8_t *framebuffer, int x, int y, uint8_t color);
-void draw_string(uint8_t *framebuffer, int x, int y, const char *str, uint8_t color);
-int measure_string_width(const char *str);
+void fill_rect(uint8_t *framebuffer, int x, int y, int width, int height, uint8_t color);
+void draw_string(uint8_t *framebuffer, int x, int y, const char *str, uint8_t color, int scale);
+void draw_string_centered(uint8_t *framebuffer, int y, const char *str, uint8_t color, int scale);
+int measure_string_width(const char *str, int scale);
+int measure_string_height(const char *str, int scale);
 ```
 
-## UTF-8 Module (`utf8.h`)
-
-UTF-8 string utilities (used internally by graphics module).
+## UTF-8 Module (`main/display_epaper/utf8.h`)
 
 ```c
-// Decode next codepoint
-uint32_t utf8_next_codepoint(const char **str);
-
-// Count characters (not bytes)
-size_t utf8_strlen(const char *str);
+uint32_t utf8_next_codepoint(const char **str);  // decode next codepoint, advance pointer
+size_t utf8_strlen(const char *str);             // count characters (not bytes)
 ```
 
-### Example
-```c
-const char *text = "Привіт";
-size_t chars = utf8_strlen(text);  // Returns 6 (not 12)
+## Font (`main/display_epaper/fonts/font_10x20.h`)
 
-const char *p = text;
-while (*p) {
-    uint32_t codepoint = utf8_next_codepoint(&p);
-    // Process codepoint...
-}
-```
+10x20 pixel glyphs (X11 Misc-Fixed, public domain): ASCII 32-126, the degree
+sign and the Ukrainian alphabet. Each glyph is 20 rows of `uint16_t`, bit 15 is
+the left-most pixel. Regenerate with `tools/bdf2font.py`.
 
-## Configuration (`config.h`)
-
-Hardware and display constants.
+## Font metrics (`main/global_constants.h`)
 
 ```c
-// Display dimensions
-#define DISPLAY_WIDTH   80
-#define DISPLAY_HEIGHT  128
-
-// Font metrics
-#define FONT_CHAR_WIDTH     5
-#define FONT_CHAR_HEIGHT    7
-#define FONT_CHAR_SPACING   6
-
-// Hardware pins
-#define EPD_PIN_MOSI    15
-#define EPD_PIN_CLK     14
-#define EPD_PIN_CS      13
-// ... etc
+#define FONT_CHAR_WIDTH    10
+#define FONT_CHAR_HEIGHT   20
+#define FONT_CHAR_SPACING  11   // character advance
+#define FONT_LINE_SPACING  2    // extra pixels between lines
 ```
 
-## Color Values
+## Board Modules
 
-- `0` = White (background)
-- `1` = Black (foreground)
-
-## Coordinate System
-
-```
-    (0,0) ──────────► X (0-79)
-      │
-      │
-      │
-      ▼
-      Y
-    (0-127)
-```
-
-## Common Patterns
-
-### Centered Text
 ```c
-int y = (DISPLAY_HEIGHT - FONT_CHAR_HEIGHT) / 2;
-display_draw_text_centered(y, "Centered Text", 0);
-```
+// main/board_power/board_power.h
+void board_power_init_early(void);             // battery latch on, audio off
+void board_power_prepare_for_deep_sleep(void); // hold power pins through deep sleep
 
-### Multi-line Text
-```c
-display_draw_text_centered(40, "Line 1", 0);
-display_draw_text_centered(50, "Line 2", 0);
-display_draw_text_centered(60, "Line 3", 0);
-```
+// main/rtc_pcf85063/rtc_pcf85063.h
+esp_err_t rtc_pcf85063_init(void);
+esp_err_t rtc_pcf85063_restore_system_time(void);
+esp_err_t rtc_pcf85063_save_system_time(void);
+esp_err_t rtc_pcf85063_arm_daily_alarm(int local_hour, int local_minute);
 
-### Right-aligned Text
-```c
-const char *text = "Right";
-int width = display_measure_text(text);
-int x = DISPLAY_WIDTH - width;
-display_draw_text(x, 60, text, 0);
-```
+// main/shtc3/shtc3.h
+esp_err_t shtc3_read(shtc3_reading_t *reading);   // temperature_x10, humidity
 
-### Full Screen Message
-```c
-display_init();
-display_clear();
+// main/battery_level/battery_level.h
+int battery_level_read_percent(int *millivolts);  // 0-100, or -1
 
-const char *title = "Title";
-const char *message = "Message text here";
-
-int title_y = 40;
-int message_y = 60;
-
-display_draw_text_centered(title_y, title, 0);
-display_draw_text_centered(message_y, message, 0);
-
-display_update();
-display_sleep();
+// main/sntp/sntp.h
+bool sntp_is_sync_due(void);                      // Wi-Fi sync policy
 ```

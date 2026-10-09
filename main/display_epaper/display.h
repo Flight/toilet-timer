@@ -10,14 +10,9 @@
 #include "esp_err.h"
 
 /**
- * @brief Display context structure (opaque)
- */
-typedef struct display_ctx display_ctx_t;
-
-/**
  * @brief Initialize the display subsystem
  *
- * Initializes the e-paper hardware and allocates framebuffer.
+ * Initializes the e-paper hardware and allocates the framebuffer.
  *
  * @return
  *      - ESP_OK on success
@@ -39,23 +34,55 @@ void display_clear(void);
 /**
  * @brief Draw text on the framebuffer
  *
- * @param x X coordinate (pixels)
- * @param y Y coordinate (pixels)
+ * @param x X coordinate (logical pixels)
+ * @param y Y coordinate (logical pixels)
  * @param text UTF-8 encoded text string
- * @param color 0=white, 1=black
+ * @param color 0=black, 1=white
+ * @param scale Integer zoom factor (1 = native font size)
  */
-void display_draw_text(int x, int y, const char *text, uint8_t color);
+void display_draw_text(int x, int y, const char *text, uint8_t color, int scale);
 
 /**
- * @brief Get the width of a text string in pixels
+ * @brief Fill a rectangle on the framebuffer
+ *
+ * @param x Left edge (logical pixels)
+ * @param y Top edge (logical pixels)
+ * @param width Width in pixels
+ * @param height Height in pixels
+ * @param color 0=black, 1=white
+ */
+void display_fill_rect(int x, int y, int width, int height, uint8_t color);
+
+/**
+ * @brief Draw text with every line centered horizontally
+ *
+ * @param y Y coordinate of the top of the first line
+ * @param text UTF-8 encoded text string ('\n' separates lines)
+ * @param color 0=black, 1=white
+ * @param scale Integer zoom factor (1 = native font size)
+ */
+void display_draw_text_centered(int y, const char *text, uint8_t color, int scale);
+
+/**
+ * @brief Get the width of the widest line of a text string in pixels
  *
  * @param text UTF-8 encoded text string
+ * @param scale Integer zoom factor
  * @return Width in pixels
  */
-int display_measure_text(const char *text);
+int display_measure_text(const char *text, int scale);
 
 /**
- * @brief Update the physical display with framebuffer contents
+ * @brief Get the total height of a (multi-line) text string in pixels
+ *
+ * @param text UTF-8 encoded text string
+ * @param scale Integer zoom factor
+ * @return Height in pixels (0 for an empty string)
+ */
+int display_text_height(const char *text, int scale);
+
+/**
+ * @brief Update the physical display with framebuffer contents (full refresh)
  *
  * @return
  *      - ESP_OK on success
@@ -64,41 +91,30 @@ int display_measure_text(const char *text);
 esp_err_t display_update(void);
 
 /**
- * @brief Put display into deep sleep mode
- *
- * @return
- *      - ESP_OK on success
- *      - ESP_FAIL if sleep operation fails
+ * @brief Put display into deep sleep mode and cut its supply
  */
 esp_err_t display_sleep(void);
 
 /**
  * @brief Wake up display from sleep mode
- *
- * @return
- *      - ESP_OK on success
- *      - ESP_FAIL if wake operation fails
  */
 esp_err_t display_wake(void);
 
 /**
- * @brief Get display width
- *
- * @return Width in pixels
+ * @brief Get logical display width (after rotation)
  */
 int display_get_width(void);
 
 /**
- * @brief Get display height
- *
- * @return Height in pixels
+ * @brief Get logical display height (after rotation)
  */
 int display_get_height(void);
 
 /**
- * @brief Enable display power pin early for stable battery operation
+ * @brief Enable the display supply pin early for stable battery operation
  *
- * Should be called before display_init() during early boot.
+ * Should be called before display_init() during early boot. Also releases the
+ * deep-sleep hold that kept the panel unpowered while sleeping.
  */
 void display_enable_power_early(void);
 

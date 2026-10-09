@@ -1,6 +1,6 @@
 /**
  * @file deep_sleep.h
- * @brief Deep sleep management with EXT1 wake-up
+ * @brief Deep sleep management with button, RTC alarm and timer wake-up
  */
 
 #ifndef DEEP_SLEEP_H
@@ -9,7 +9,10 @@
 #include <esp_err.h>
 
 /**
- * @brief Configure deep sleep wake-up sources (EXT1 on GPIO0, GPIO3, GPIO4)
+ * @brief Configure deep sleep wake-up sources
+ *
+ * EXT1 on the reset and sync buttons (and the RTC alarm pin when the
+ * PCF85063 is enabled), plus the ESP32 timer as the nightly fallback.
  *
  * @return ESP_OK on success, error code otherwise
  */

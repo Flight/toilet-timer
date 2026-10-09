@@ -54,7 +54,7 @@ int time_utils_days_between(time_t from, time_t to)
     return (int)((to_day - from_day) / (24 * 60 * 60));
 }
 
-uint64_t time_utils_us_until_midnight(void)
+uint64_t time_utils_us_until_hour(int hour)
 {
     /* Ensure timezone is set */
     time_utils_init_timezone();
@@ -65,36 +65,43 @@ uint64_t time_utils_us_until_midnight(void)
     struct tm now_tm = {0};
     localtime_r(&now, &now_tm);
 
-    /* Target 1:00 AM for the daily OTA check wake-up.
-     * The ESP32's internal oscillator drifts ~27 min/day, causing early
-     * wake-ups. After SNTP corrects the time, the remaining sleep time
-     * can be very short (seconds/minutes), causing repeated wake-ups.
-     * To prevent this, if the time until target is under 1 hour,
-     * we skip to the next day's 1:00 AM instead. */
+    /* The ESP32's internal oscillator drifts ~27 min/day, causing early
+     * wake-ups. After the time is corrected, the remaining sleep time can be
+     * very short (seconds/minutes), causing repeated wake-ups. To prevent
+     * this, if the time until the target is under 1 hour, we skip to the
+     * next day instead. */
     struct tm target_tm = now_tm;
-    target_tm.tm_hour = 1;
+    target_tm.tm_hour = hour;
     target_tm.tm_min = 0;
     target_tm.tm_sec = 0;
-
-    /* If it's already past 1:00 AM, target next day */
-    if (now_tm.tm_hour >= 1) {
-        target_tm.tm_mday += 1;
-    }
+    target_tm.tm_isdst = -1;
 
     time_t target = mktime(&target_tm);
+
+    /* If the target hour already passed today, aim for tomorrow */
+    if (target <= now) {
+        target_tm.tm_mday += 1;
+        target_tm.tm_isdst = -1;
+        target = mktime(&target_tm);
+    }
 
     int64_t seconds_until_target = (int64_t)(target - now);
 
     /* If less than 1 hour until target, skip to next day to avoid
      * multiple short wake-sleep cycles from RTC drift correction */
     if (seconds_until_target < 3600) {
-        ESP_LOGI(TAG, "Only %lld seconds until 1:00 AM, targeting next day", seconds_until_target);
+        ESP_LOGI(TAG, "Only %lld seconds until %02d:00, targeting next day", seconds_until_target, hour);
         target_tm.tm_mday += 1;
+        target_tm.tm_isdst = -1;
         target = mktime(&target_tm);
         seconds_until_target = (int64_t)(target - now);
     }
 
-    ESP_LOGI(TAG, "Seconds until 1:00 AM: %lld", seconds_until_target);
+    if (seconds_until_target < 60) {
+        seconds_until_target = 60;
+    }
+
+    ESP_LOGI(TAG, "Seconds until %02d:00: %lld", hour, seconds_until_target);
 
     return (uint64_t)seconds_until_target * 1000000ULL;
 }

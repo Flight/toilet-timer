@@ -1,21 +1,26 @@
 /**
  * @file display.c
  * @brief High-level display interface implementation
- *
-
  */
 
 #include "sdkconfig.h"
 #include "display.h"
-#include "driver/epd_driver_gdew0102t4.h"
+#include "driver/epd_driver_ssd1681.h"
 #include "graphics.h"
 #include "global_constants.h"
 #include "esp_log.h"
+#include "esp_heap_caps.h"
 #include "driver/gpio.h"
 #include <stdlib.h>
 #include <string.h>
 
 static const char *TAG = "display";
+
+#ifdef CONFIG_EPD_POWER_ACTIVE_LOW
+#define EPD_POWER_ON_LEVEL 0
+#else
+#define EPD_POWER_ON_LEVEL 1
+#endif
 
 static struct {
     uint8_t *framebuffer;
@@ -39,6 +44,7 @@ esp_err_t display_init(void)
         .pin_rst = CONFIG_EPD_PIN_RST,
         .pin_busy = CONFIG_EPD_PIN_BUSY,
         .pin_power = CONFIG_EPD_PIN_POWER,
+        .power_active_low = (EPD_POWER_ON_LEVEL == 0),
         .width = CONFIG_DISPLAY_WIDTH,
         .height = CONFIG_DISPLAY_HEIGHT,
     };
@@ -49,9 +55,9 @@ esp_err_t display_init(void)
         return ret;
     }
 
-    /* Allocate framebuffer */
+    /* Allocate framebuffer in DMA-capable internal RAM (sent to the panel via SPI DMA) */
     s_display.buffer_size = (CONFIG_DISPLAY_WIDTH * CONFIG_DISPLAY_HEIGHT) / 8;
-    s_display.framebuffer = malloc(s_display.buffer_size);
+    s_display.framebuffer = heap_caps_malloc(s_display.buffer_size, MALLOC_CAP_DMA);
     if (s_display.framebuffer == NULL) {
         ESP_LOGE(TAG, "Failed to allocate framebuffer");
         epd_deinit();
@@ -65,7 +71,9 @@ esp_err_t display_init(void)
     memset(s_display.framebuffer, 0xFF, s_display.buffer_size);
 
     s_display.initialized = true;
-    ESP_LOGI(TAG, "Display initialized (%dx%d)", CONFIG_DISPLAY_WIDTH, CONFIG_DISPLAY_HEIGHT);
+    ESP_LOGI(TAG, "Display initialized (%dx%d physical, %dx%d logical, rotation %d)",
+             CONFIG_DISPLAY_WIDTH, CONFIG_DISPLAY_HEIGHT,
+             graphics_get_width(), graphics_get_height(), CONFIG_DISPLAY_ROTATION);
 
     return ESP_OK;
 }
@@ -77,7 +85,7 @@ void display_deinit(void)
     }
 
     if (s_display.framebuffer != NULL) {
-        free(s_display.framebuffer);
+        heap_caps_free(s_display.framebuffer);
         s_display.framebuffer = NULL;
     }
 
@@ -96,18 +104,41 @@ void display_clear(void)
     memset(s_display.framebuffer, 0xFF, s_display.buffer_size);
 }
 
-void display_draw_text(int x, int y, const char *text, uint8_t color)
+void display_draw_text(int x, int y, const char *text, uint8_t color, int scale)
 {
     if (!s_display.initialized || s_display.framebuffer == NULL) {
         return;
     }
 
-    draw_string(s_display.framebuffer, x, y, text, color);
+    draw_string(s_display.framebuffer, x, y, text, color, scale);
 }
 
-int display_measure_text(const char *text)
+void display_fill_rect(int x, int y, int width, int height, uint8_t color)
 {
-    return measure_string_width(text);
+    if (!s_display.initialized || s_display.framebuffer == NULL) {
+        return;
+    }
+
+    fill_rect(s_display.framebuffer, x, y, width, height, color);
+}
+
+void display_draw_text_centered(int y, const char *text, uint8_t color, int scale)
+{
+    if (!s_display.initialized || s_display.framebuffer == NULL) {
+        return;
+    }
+
+    draw_string_centered(s_display.framebuffer, y, text, color, scale);
+}
+
+int display_measure_text(const char *text, int scale)
+{
+    return measure_string_width(text, scale);
+}
+
+int display_text_height(const char *text, int scale)
+{
+    return measure_string_height(text, scale);
 }
 
 esp_err_t display_update(void)
@@ -142,17 +173,21 @@ esp_err_t display_wake(void)
 
 int display_get_width(void)
 {
-    return CONFIG_DISPLAY_WIDTH;
+    return graphics_get_width();
 }
 
 int display_get_height(void)
 {
-    return CONFIG_DISPLAY_HEIGHT;
+    return graphics_get_height();
 }
 
 void display_enable_power_early(void)
 {
-    /* Enable e-paper display power pin early for stable battery operation */
+    /* Set the level before switching the pad to output so it never glitches
+     * to the wrong state, then release the deep-sleep hold (the pin was held
+     * in the "off" state while sleeping). */
+    gpio_set_level(CONFIG_EPD_PIN_POWER, EPD_POWER_ON_LEVEL);
+
     gpio_config_t pwr_conf = {
         .pin_bit_mask = (1ULL << CONFIG_EPD_PIN_POWER),
         .mode = GPIO_MODE_OUTPUT,
@@ -161,6 +196,8 @@ void display_enable_power_early(void)
         .intr_type = GPIO_INTR_DISABLE,
     };
     gpio_config(&pwr_conf);
-    gpio_set_level(CONFIG_EPD_PIN_POWER, 1);
+    gpio_set_level(CONFIG_EPD_PIN_POWER, EPD_POWER_ON_LEVEL);
+    gpio_hold_dis(CONFIG_EPD_PIN_POWER);
+
     ESP_LOGI(TAG, "Display power pin %d enabled early", CONFIG_EPD_PIN_POWER);
 }

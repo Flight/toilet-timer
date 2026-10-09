@@ -30,10 +30,15 @@ bool time_utils_is_valid(void);
 int time_utils_days_between(time_t from, time_t to);
 
 /**
- * @brief Calculate microseconds until next local midnight
- * @return Microseconds until midnight (minimum 60 seconds)
+ * @brief Calculate microseconds until the next occurrence of a local hour
+ *
+ * If the target is less than one hour away it is pushed to the next day, so
+ * that a drifting ESP32 timer cannot cause several short wake-sleep cycles.
+ *
+ * @param hour Local hour of day (0-23)
+ * @return Microseconds until hour:00 (minimum 60 seconds)
  */
-uint64_t time_utils_us_until_midnight(void);
+uint64_t time_utils_us_until_hour(int hour);
 
 /**
  * @brief Get Ukrainian day suffix based on pluralization rules

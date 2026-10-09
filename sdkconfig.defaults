@@ -1,0 +1,24 @@
+# Toilet Timer on the Waveshare ESP32-S3-ePaper-1.54 (V2 board: ESP32-S3-PICO-1-N8R8)
+# Applied automatically when sdkconfig is generated; set Wi-Fi credentials with `idf.py menuconfig`.
+CONFIG_IDF_TARGET="esp32s3"
+
+# 8 MB quad flash, 8 MB octal PSRAM
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_SPIRAM_USE_MEMMAP=y
+
+# Factory + two 2 MB OTA slots; NVS stays at 0x9000/0x4000 for set_manual_timestamp/
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# OTA from the local HTTPS server (see README)
+CONFIG_IS_ESP32_FIRMWARE_UPGRADE_ENABLED=y
+CONFIG_ESP32_FIRMWARE_UPGRADE_URL="https://192.168.50.123:8070/toilet-timer.bin"
+
+# Debug helpers carried over from the original configuration
+CONFIG_FREERTOS_USE_LIST_DATA_INTEGRITY_CHECK_BYTES=y
+CONFIG_FREERTOS_VTASKLIST_INCLUDE_COREID=y
+CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y

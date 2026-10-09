@@ -76,7 +76,7 @@ Desktop.ini
 *.sln.docstates # Visual Studio
 
 sdkconfig*
-!sdkconfig.default
+!sdkconfig.defaults
 
 # certs/keys
 *.key

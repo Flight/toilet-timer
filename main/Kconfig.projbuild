@@ -1,4 +1,4 @@
-menu "DONGLE GPIO SETTINGS"
+menu "TOILET TIMER BOARD SETTINGS (Waveshare ESP32-S3-ePaper-1.54)"
   config ENV_GPIO_RANGE_MIN
     int
     default 0
@@ -7,106 +7,269 @@ menu "DONGLE GPIO SETTINGS"
     int
     default 48
 
+  config BUTTON_PWR_GPIO
+    int "PWR key GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 18
+    help
+      GPIO number (IOxx) of the PWR key (active LOW). A short press of either
+      key marks a litter change and resets the counter to "today"; holding a
+      key forces a Wi-Fi time sync and OTA check instead. Must be an RTC GPIO
+      (0-21) so it can wake the chip from deep sleep.
+
+  config BUTTON_BOOT_GPIO
+    int "BOOT key GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 0
+    help
+      GPIO number (IOxx) of the BOOT key (active LOW). Same function as the
+      PWR key.
+
+  config BUTTON_LONG_PRESS_MS
+    int "Long press threshold in ms after boot"
+    range 300 10000
+    default 1500
+    help
+      A key still held this many milliseconds after the wake-up boot counts as
+      a long press (the boot itself takes about a second, so this is roughly a
+      2.5 s hold). A long press triggers the Wi-Fi sync and OTA check without
+      resetting the counter.
+
+  config LED_FEEDBACK_ENABLED
+    bool "Blink the green LED as feedback"
+    default y
+    help
+      Slow blinks for 5 s when a litter change is recorded, one long blink
+      when a sync is requested, fast blinks for 10 s when the battery is low.
+      The LED draws about 0.1 mA while lit and is released before deep sleep.
+      (The red LED is the charger's own status indicator and cannot be
+      controlled by the firmware.)
+
+  config LED_GREEN_GPIO
+    int "Green LED GPIO number (active LOW)"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 3
+    depends on LED_FEEDBACK_ENABLED
+
+  config BOARD_POWER_LATCH_GPIO
+    int "Battery power latch GPIO number (BAT_Control)"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 17
+    help
+      When the board runs from the lithium battery, this pin must be driven HIGH
+      to keep the 3.3V rail enabled after the PWR key is released, and it is held
+      HIGH through deep sleep. Driving it LOW switches the board off completely.
+
+  config BOARD_AUDIO_POWER_GPIO
+    int "Audio codec power enable GPIO number (active LOW)"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 42
+    help
+      Supply switch (PA_EN) of the ES8311 codec and the speaker amplifier.
+      The pin state is held through deep sleep.
+
+  config BOARD_AUDIO_POWER_KEEP_ON
+    bool "Keep the audio codec powered"
+    default y
+    help
+      The ES8311 codec shares the I2C bus with the RTC and the SHTC3 sensor.
+      When its supply is switched off, its input protection diodes clamp SDA
+      and SCL low: the RTC and the sensor stop responding, and the bus
+      pull-ups leak through the unpowered chip. Keeping the codec powered in
+      its reset state costs only its standby current. The speaker amplifier
+      (PA_CTRL) stays disabled either way.
+
+  config BOARD_I2C_SDA_GPIO
+    int "I2C SDA GPIO number (RTC, SHTC3, codec)"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 47
+
+  config BOARD_I2C_SCL_GPIO
+    int "I2C SCL GPIO number (RTC, SHTC3, codec)"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 48
+
+  config SHTC3_ENABLED
+    bool "Show temperature and humidity from the onboard SHTC3 sensor"
+    default y
+    help
+      Reads the SHTC3 once per wake-up (a few milliseconds, the sensor sleeps
+      in between) and shows the values in the status bar.
+
   config IS_BATTERY_LEVEL_ENABLED
     bool "Enable battery level"
     default y
     help
-      Enable battery level.
+      Measure the battery voltage once per wake-up and show the charge level
+      in the status bar.
 
   config BATTERY_LEVEL_GPIO
     int "Battery level GPIO number"
     range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
-    default 16
+    default 4
     depends on IS_BATTERY_LEVEL_ENABLED
     help
-      GPIO number (IOxx) for the battery level.
+      GPIO number (IOxx) of the battery voltage divider (BAT_ADC). On the
+      Waveshare board GPIO4 (ADC1 channel 3) sees VBAT / 2.
 
-  config BUTTON_PUSH_GPIO
-    int "Push button GPIO number"
-    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
-    default 0
+  config BATTERY_FULL_MV
+    int "Measured battery voltage that counts as 100 % (mV)"
+    range 3600 4400
+    default 4060
+    depends on IS_BATTERY_LEVEL_ENABLED
     help
-      GPIO number (IOxx) for the push button.
+      Calibration point: the voltage this firmware measures on a fully charged
+      battery (the on-board divider and ADC read a little low). 3300 mV is
+      always 0 %; the lithium discharge curve is stretched between the two.
 
-  config BUTTON_LEFT_GPIO
-    int "Left button GPIO number"
-    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
-    default 3
+  config BATTERY_LOW_PERCENT
+    int "Low battery warning threshold (%)"
+    range 1 90
+    default 20
+    depends on IS_BATTERY_LEVEL_ENABLED
     help
-      GPIO number (IOxx) for the left button.
-
-  config BUTTON_RIGHT_GPIO
-    int "Right button GPIO number"
-    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
-    default 4
-    help
-      GPIO number (IOxx) for the right button.
+      At or below this level the green LED blinks fast for 10 s on every
+      wake-up and a large battery icon is shown at the bottom of the screen.
 endmenu
 
-menu "DONGLE E-PAPER DISPLAY SETTINGS"
+menu "TOILET TIMER E-PAPER DISPLAY SETTINGS"
   config EPD_PIN_MOSI
     int "E-Paper MOSI GPIO number"
     range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
-    default 15
+    default 13
     help
-      GPIO number (IOxx) for the E-Paper display MOSI pin.
+      GPIO number (IOxx) for the E-Paper display MOSI (SDI) pin.
 
   config EPD_PIN_CLK
     int "E-Paper CLK GPIO number"
     range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
-    default 14
+    default 12
     help
-      GPIO number (IOxx) for the E-Paper display CLK pin.
+      GPIO number (IOxx) for the E-Paper display SCLK pin.
 
   config EPD_PIN_CS
     int "E-Paper CS GPIO number"
     range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
-    default 13
+    default 11
     help
       GPIO number (IOxx) for the E-Paper display CS pin.
 
   config EPD_PIN_DC
     int "E-Paper DC GPIO number"
     range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
-    default 12
+    default 10
     help
-      GPIO number (IOxx) for the E-Paper display DC pin.
+      GPIO number (IOxx) for the E-Paper display D/C pin.
 
   config EPD_PIN_RST
     int "E-Paper RST GPIO number"
     range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
-    default 11
+    default 9
     help
       GPIO number (IOxx) for the E-Paper display RST pin.
 
   config EPD_PIN_BUSY
     int "E-Paper BUSY GPIO number"
     range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
-    default 10
+    default 8
     help
-      GPIO number (IOxx) for the E-Paper display BUSY pin.
+      GPIO number (IOxx) for the E-Paper display BUSY pin (HIGH while busy).
 
   config EPD_PIN_POWER
     int "E-Paper POWER GPIO number"
     range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
-    default 42
+    default 6
     help
-      GPIO number (IOxx) for the E-Paper display POWER pin.
+      GPIO number (IOxx) of the E-Paper supply switch (EPD3V3_EN).
+
+  config EPD_POWER_ACTIVE_LOW
+    bool "E-Paper POWER pin is active LOW"
+    default y
+    help
+      On the Waveshare board EPD3V3_EN drives a P-channel MOSFET: LOW powers the
+      panel, HIGH switches it off.
 
   config DISPLAY_WIDTH
     int "Display width in pixels"
-    default 80
+    default 200
     help
-      Width of the E-Paper display in pixels.
+      Physical width of the E-Paper display in pixels.
 
   config DISPLAY_HEIGHT
     int "Display height in pixels"
-    default 128
+    default 200
     help
-      Height of the E-Paper display in pixels.
+      Physical height of the E-Paper display in pixels.
+
+  choice DISPLAY_ROTATION_CHOICE
+    prompt "Display rotation"
+    default DISPLAY_ROTATION_0
+    help
+      Rotation of the rendered image relative to the panel's native orientation.
+      Change it if the text appears sideways or upside down in your enclosure.
+
+    config DISPLAY_ROTATION_0
+      bool "0 degrees"
+    config DISPLAY_ROTATION_90
+      bool "90 degrees clockwise"
+    config DISPLAY_ROTATION_180
+      bool "180 degrees"
+    config DISPLAY_ROTATION_270
+      bool "270 degrees clockwise"
+  endchoice
+
+  config DISPLAY_ROTATION
+    int
+    default 0 if DISPLAY_ROTATION_0
+    default 90 if DISPLAY_ROTATION_90
+    default 180 if DISPLAY_ROTATION_180
+    default 270 if DISPLAY_ROTATION_270
+
+  config SCREEN_DEMO
+    bool "Test only: cycle through every screen variant at boot"
+    default n
+    help
+      Shows each message the device can display (today, yesterday, N days
+      ago with every Ukrainian plural form, first-boot message, no-record
+      screen) for a few seconds at every boot, then continues normally.
+      Leave disabled for normal operation.
+
+  config SCREEN_DEMO_HOLD_MS
+    int "Milliseconds to hold each demo screen"
+    default 5000
+    depends on SCREEN_DEMO
 endmenu
 
-menu "DONGLE WI-FI SETTINGS"
+menu "TOILET TIMER RTC SETTINGS"
+  config RTC_PCF85063_ENABLED
+    bool "Use the onboard PCF85063 RTC chip"
+    default y
+    help
+      Keep the time in the crystal-driven PCF85063 RTC instead of relying only on
+      the ESP32's RC oscillator (which drifts about half an hour per day). The
+      system time is restored from the RTC on every boot, written back after each
+      SNTP sync, and the RTC alarm wakes the device for the nightly refresh.
+
+  config RTC_INT_GPIO
+    int "RTC interrupt (alarm) GPIO number"
+    range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
+    default 5
+    depends on RTC_PCF85063_ENABLED
+    help
+      Open-drain, active LOW alarm output of the PCF85063. Must be an RTC GPIO
+      (0-21) so it can wake the chip from deep sleep.
+
+  config RTC_ALARM_TEST_MINUTES
+    int "Test only: fire the RTC alarm this many minutes after boot (0 = nightly alarm)"
+    range 0 1440
+    default 0
+    depends on RTC_PCF85063_ENABLED
+    help
+      Debug aid to verify the alarm wake-up path without waiting for the
+      night. Leave at 0 for normal operation.
+endmenu
+
+menu "TOILET TIMER WI-FI SETTINGS"
   config WIFI_SSID
     string "Wi-Fi SSID"
     default "wifi_network_name"
@@ -119,23 +282,24 @@ menu "DONGLE WI-FI SETTINGS"
     help
       Wi-Fi password.
 
-  config WIFI_DAILY_SYNC
-    bool "Connect Wi-Fi daily at 1:00 AM"
-    default n
+  config TIME_SYNC_INTERVAL_DAYS
+    int "Days between automatic Wi-Fi time syncs"
+    range 1 365
+    default 30
     help
-      When enabled, the device connects to Wi-Fi on every daily 1:00 AM timer
-      wake-up to sync time and check for firmware updates.
+      Wi-Fi is expensive on battery, so the device connects only when needed:
+      - always when the sync/update button (BOOT) is pressed,
+      - on the very first boot, when the time is not known yet,
+      - otherwise at most once per this many days (checked on every wake-up,
+        including the nightly refresh), to correct the RTC drift and check
+        for firmware updates.
 
-      Disabled (default): Wi-Fi connects only when the user presses a button
-      (GPIO3 or GPIO4). Time drift accumulates between button presses (~30 min/day,
-      so ~3.5 hours per week without a button press).
-
-      Enabled: Time is corrected every night, keeping drift under ~30 minutes.
-      Firmware updates are also checked daily. Power consumption is significantly
-      higher due to the nightly Wi-Fi session.
+      The PCF85063 RTC keeps the time between syncs to within a few seconds
+      per month. Summer/winter time needs no sync at all: the RTC stores UTC
+      and the POSIX timezone rule on the device applies the DST switch.
 endmenu
 
-menu "DONGLE OTA UPDATE SETTINGS"
+menu "TOILET TIMER OTA UPDATE SETTINGS"
   config IS_ESP32_FIRMWARE_UPGRADE_ENABLED
     bool "Enable ESP32 firmware upgrade"
     default n
@@ -151,7 +315,7 @@ menu "DONGLE OTA UPDATE SETTINGS"
       Use http://127.0.0.1:5001/toilet-timer.bin for local testing.
 endmenu
 
-menu "DONGLE SNTP TIME SETTINGS"
+menu "TOILET TIMER SNTP TIME SETTINGS"
   config SNTP_TIME_SERVER
     string "SNTP server address"
     default "pool.ntp.org"
