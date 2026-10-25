@@ -51,6 +51,16 @@ esp_err_t nvs_utils_read_u8(const char *namespace, const char *key, uint8_t *val
 esp_err_t nvs_utils_write_u8(const char *namespace, const char *key, uint8_t value);
 
 /**
+ * @brief Read a uint32_t value from NVS
+ */
+esp_err_t nvs_utils_read_u32(const char *namespace, const char *key, uint32_t *value);
+
+/**
+ * @brief Write a uint32_t value to NVS
+ */
+esp_err_t nvs_utils_write_u32(const char *namespace, const char *key, uint32_t value);
+
+/**
  * @brief Read a timestamp from NVS
  * @param namespace NVS namespace
  * @param key Key name

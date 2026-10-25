@@ -54,6 +54,7 @@ static adc_oneshot_unit_handle_t s_adc_handle = NULL;
 static adc_cali_handle_t s_cali_handle = NULL;
 static adc_channel_t s_channel;
 static bool s_initialized = false;
+static int s_last_mv = -1;
 
 static esp_err_t battery_level_init(void)
 {
@@ -128,6 +129,7 @@ int battery_level_read_percent(int *millivolts)
     }
 
     int battery_mv = (sum_mv / samples) * BATTERY_DIVIDER_RATIO;
+    s_last_mv = battery_mv;
     if (millivolts != NULL) {
         *millivolts = battery_mv;
     }
@@ -153,6 +155,11 @@ int battery_level_read_percent(int *millivolts)
     return percent;
 }
 
+int battery_level_last_mv(void)
+{
+    return s_last_mv;
+}
+
 #else /* CONFIG_IS_BATTERY_LEVEL_ENABLED */
 
 int battery_level_read_percent(int *millivolts)
@@ -161,6 +168,11 @@ int battery_level_read_percent(int *millivolts)
     if (millivolts != NULL) {
         *millivolts = 0;
     }
+    return -1;
+}
+
+int battery_level_last_mv(void)
+{
     return -1;
 }
 

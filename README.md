@@ -33,11 +33,13 @@ Other variants: "Сьогодні" (today) and "Учора" (yesterday) in large
 ## Features
 
 - 1.54" e-paper display (200x200) - retains the image with zero power
-- Deep sleep between wake-ups for long battery life
+- Deep sleep between wake-ups, with the board's power latch held by the ESP32's internal pull-up instead of a driven output (saves about 2.5 mA, see [Battery Life](#battery-life))
 - A short press of either key (PWR or BOOT) marks a litter change and resets the counter; the green LED blinks for 5 s
 - Holding either key for about two seconds forces a Wi-Fi time sync and OTA firmware check without resetting the counter; the green LED lights once for a second
 - Low battery (20 % by default): the green LED blinks fast for 10 s on every wake-up and a large battery icon appears at the bottom of the screen
-- Crystal-driven PCF85063 RTC keeps the time between syncs and wakes the device at 1:00 AM for the nightly refresh (the ESP32 sleep timer only serves as a fallback)
+- Battery voltage history of the last 48 wake-ups in NVS, printed at every boot with the drain since the last charge
+- Safety nets: a display failure or a hang can never keep the device awake, deep sleep is forced after 5 minutes at the latest
+- Crystal-driven PCF85063 RTC keeps the time between syncs and wakes the device at 1:00 AM for the nightly refresh (the ESP32 sleep timer is armed two hours after the alarm and only fires if the RTC did not)
 - Wi-Fi is used only when needed: on the BOOT key, on the first boot, or when the last sync is older than `CONFIG_TIME_SYNC_INTERVAL_DAYS` (30 by default); summer/winter time switches without any sync, because the RTC stores UTC and the device applies the POSIX timezone rule
 - Status bar with the battery level (open-circuit-voltage estimate, meaningful on battery) and the bathroom temperature/humidity from the onboard SHTC3 sensor
 - Shows days elapsed since the last change in Ukrainian
@@ -64,6 +66,7 @@ toilet-timer/
 │   ├── global_event_group.h    # FreeRTOS event group definitions
 │   ├── Kconfig.projbuild       # Board pins and feature options (idf.py menuconfig)
 │   ├── battery_level/          # Battery voltage measurement (ADC + divider)
+│   ├── battery_log/            # Battery voltage history in NVS, printed at boot
 │   ├── board_i2c/              # Shared I2C bus (RTC, SHTC3)
 │   ├── board_power/            # Battery power latch and deep-sleep pin holds
 │   ├── deep_sleep/             # Deep sleep wake-up sources (keys, RTC alarm, timer)
@@ -138,7 +141,30 @@ If the board does not show up, hold BOOT while plugging it in (or while pressing
 
 The red LED is wired to the charger chip's status pin only (lit while charging) and cannot be controlled by the firmware. The battery percentage is an open-circuit-voltage estimate calibrated with `CONFIG_BATTERY_FULL_MV` (the voltage measured on a full battery, 4060 mV by default).
 
-The firmware never switches the board off; it sleeps with the battery latch held, waking at 1:00 AM to refresh the day counter. Deep-sleep current is dominated by the board's regulators, not by the firmware.
+The firmware never switches the board off; it sleeps with the battery latch held, waking at 1:00 AM to refresh the day counter.
+
+### Battery Life
+
+The schematic of the board explains where the energy goes in deep sleep. Nothing the ESP32 itself does matters much (about 10 µA); the board around it does:
+
+| Consumer in deep sleep | Current | Firmware |
+|------------------------|---------|----------|
+| Battery latch: BAT_Control drives the base of the latch transistor T2 through R64 = 1 kΩ. A GPIO driven HIGH sinks ~2.6 mA for as long as the board is on. | ~2.6 mA | Replaced by the internal pull-up (~60 µA), see below |
+| Audio rail load switch: with PA_EN low, its 10 kΩ gate pull-up R73 sinks current into the GPIO | 0.33 mA | Rail switched off for deep sleep |
+| MEMS microphone on the audio rail (back-fed through the I2C pull-ups even when the rail is off) | ~0.15 mA | Cannot be fixed in firmware |
+| MP1605 buck converter, RTC, SHTC3 asleep, pull-ups of the keys | ~0.03 mA | - |
+
+With the original 2.6 mA the device used about 70 mAh per day, one week on a 500 mAh cell. One V2 owner [measured 0.6 mA in total](https://github.com/waveshareteam/ESP32-S3-ePaper-1.54/issues/7) with the latch driven HIGH, which only fits a larger R64 than the schematic shows, so production boards may differ; the battery history below tells which board you have.
+
+**Weak latch** (`CONFIG_BOARD_POWER_LATCH_WEAK`, on by default): once NVS is up, BAT_Control is switched from a driven HIGH to an input with the internal pull-up (about 45 kΩ), which biases T2 with roughly 60 µA instead of 2.6 mA. Whether that is enough depends on the tolerances of T2 and of the pull-up, so the firmware checks itself: it records in NVS whether it is running or sleeping on the weak latch, and if the next boot is a power-on reset (the board switched itself off) it goes back to driving the pin HIGH permanently. A power loss while the battery was almost empty is not counted. The verdict is tied to `CONFIG_BOARD_POWER_LATCH_WEAK_TRIAL_ID`; change the number to try again. The failure mode is a stale screen with the board off: press PWR and it comes back with the date intact (NVS and the RTC do not depend on the latch).
+
+On the first trial with a USB host connected (the normal situation right after flashing) the firmware first measures the base node with the pull-up alone, using ADC2 on GPIO17, and refuses the trial below 520 mV, so an unsuitable board never switches itself off. The author's board measured 637 mV and held through battery-only deep sleep.
+
+Expected budget after the change: roughly 0.25–0.3 mA in deep sleep (latch ~65 µA, microphone back-feed ~0.1–0.15 mA, ESP32 and regulators ~40 µA), about 7–8 mAh per day including the nightly refresh. That is nine times less than before: a battery that lasted a week should last about two months.
+
+**Hardware fix** that always works: replace R64 (1 kΩ, next to the PWR key and T2) with 10–22 kΩ. The latch then costs 0.12–0.27 mA with the pin driven HIGH, and the weak latch can be disabled. Removing R72 (0 Ω) cuts the microphone's supply as well.
+
+**Measuring**: every wake-up appends the battery voltage to a history in NVS, printed at boot (`battery_log`), together with the wake-up cause, whether the weak latch was active and the discharge rate since the last charge. Hold a key for two seconds to wake the device without resetting the counter and read the log over USB.
 
 ### Time Sync Strategy
 
@@ -157,14 +183,14 @@ The firmware never switches the board off; it sleeps with the battery latch held
 | EPD RST            | 9    | Reset |
 | EPD BUSY           | 8    | Busy status (HIGH while busy) |
 | EPD POWER          | 6    | Panel supply switch, active LOW |
-| BAT_Control        | 17   | Battery power latch, HIGH keeps the board powered (held through deep sleep) |
+| BAT_Control        | 17   | Battery power latch, HIGH keeps the board powered; held by the internal pull-up through deep sleep (`CONFIG_BOARD_POWER_LATCH_WEAK`) |
 | PWR key (BAT_KEY)  | 18   | Wake-up; short press = mark change, long press = sync (active LOW) |
 | BOOT key           | 0    | Same as the PWR key (active LOW) |
 | Green LED          | 3    | Key-press feedback (active LOW) |
 | RTC INT            | 5    | PCF85063 alarm output, wakes the device at 1:00 AM (active LOW) |
 | I2C SDA / SCL      | 47 / 48 | PCF85063 RTC (0x51), SHTC3 (0x70) |
 | BAT_ADC            | 4    | Battery voltage / 2 (200K + 200K divider) |
-| Audio power enable | 42   | Kept LOW (codec powered in its 0 µA reset state): the ES8311 shares the I2C bus and clamps it when unpowered |
+| Audio power enable | 42   | LOW while awake (the ES8311 shares the I2C bus and clamps it when unpowered), HIGH in deep sleep (its load switch wastes 0.33 mA while on) |
 
 All pins can be changed with `idf.py menuconfig`.
 

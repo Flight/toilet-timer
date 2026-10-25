@@ -32,6 +32,8 @@
 #include "../trigger/trigger.h"
 #include "../time_utils/time_utils.h"
 #include "../battery_level/battery_level.h"
+#include "../battery_log/battery_log.h"
+#include "../board_power/board_power.h"
 #include "../led/led.h"
 #ifdef CONFIG_SHTC3_ENABLED
 #include "../shtc3/shtc3.h"
@@ -76,6 +78,7 @@ typedef struct {
 
 static struct {
     int battery_percent;   /* -1 if unavailable */
+    int battery_mv;        /* 0 if unavailable */
     bool battery_low;
 #ifdef CONFIG_SHTC3_ENABLED
     bool climate_valid;
@@ -86,7 +89,10 @@ static struct {
 /* Sensors are read once per wake-up and reused for every render */
 static void read_sensors(void)
 {
-    s_sensors.battery_percent = battery_level_read_percent(NULL);
+    s_sensors.battery_percent = battery_level_read_percent(&s_sensors.battery_mv);
+    if (s_sensors.battery_percent < 0) {
+        s_sensors.battery_mv = 0;
+    }
 #ifdef CONFIG_IS_BATTERY_LEVEL_ENABLED
     s_sensors.battery_low = (s_sensors.battery_percent >= 0 && s_sensors.battery_percent <= CONFIG_BATTERY_LOW_PERCENT);
 #endif
@@ -312,10 +318,20 @@ void show_messages_task(void *pvParameter)
 
     if (display_init() != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize display");
-        vTaskDelete(NULL);
+        deep_sleep_fallback("display init failed");
     }
 
     read_sensors();
+
+    /* Battery history: one entry per wake-up, printed at boot for drain measurements */
+    uint8_t log_flags = 0;
+    if (board_power_latch_is_weak()) {
+        log_flags |= BATTERY_LOG_FLAG_WEAK_LATCH;
+    }
+    if (xEventGroupGetBits(global_event_group) & IS_WIFI_AVAILABLE) {
+        log_flags |= BATTERY_LOG_FLAG_WIFI;
+    }
+    battery_log_record(s_sensors.battery_mv, log_flags);
 
 #ifdef CONFIG_SCREEN_DEMO
     run_screen_demo();
@@ -357,8 +373,7 @@ void show_messages_task(void *pvParameter)
 
     if (err != ESP_OK) {
         display_deinit();
-        vTaskDelete(NULL);
-        return;
+        deep_sleep_fallback("display refresh failed");
     }
 
     /* On first boot, show saved date immediately, then update after SNTP sync */
@@ -441,8 +456,7 @@ void show_messages_task(void *pvParameter)
     ESP_LOGI(TAG, "Entering deep sleep");
 
     if (deep_sleep_configure_wakeup() != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to configure deep sleep");
-        vTaskDelete(NULL);
+        deep_sleep_fallback("wake-up configuration failed");
     }
 
     deep_sleep_enter();

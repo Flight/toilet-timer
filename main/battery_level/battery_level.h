@@ -16,4 +16,11 @@
  */
 int battery_level_read_percent(int *millivolts);
 
+/**
+ * @brief Battery voltage of the last successful measurement on this wake-up
+ *
+ * @return Millivolts, or -1 if nothing was measured yet
+ */
+int battery_level_last_mv(void);
+
 #endif /* BATTERY_LEVEL_H */

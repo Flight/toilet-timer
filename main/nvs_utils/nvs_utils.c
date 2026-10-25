@@ -54,6 +54,16 @@ esp_err_t nvs_utils_write_u8(const char *namespace, const char *key, uint8_t val
     return nvs_utils_write_blob(namespace, key, &value, sizeof(value));
 }
 
+esp_err_t nvs_utils_read_u32(const char *namespace, const char *key, uint32_t *value)
+{
+    return nvs_utils_read_blob(namespace, key, value, sizeof(*value));
+}
+
+esp_err_t nvs_utils_write_u32(const char *namespace, const char *key, uint32_t value)
+{
+    return nvs_utils_write_blob(namespace, key, &value, sizeof(value));
+}
+
 esp_err_t nvs_utils_read_timestamp(const char *namespace, const char *key, time_t *timestamp)
 {
     return nvs_utils_read_blob(namespace, key, timestamp, sizeof(*timestamp));

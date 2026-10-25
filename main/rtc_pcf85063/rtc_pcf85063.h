@@ -66,8 +66,9 @@ esp_err_t rtc_pcf85063_arm_alarm_at(time_t target);
  *
  * @param local_hour Hour of day in local time (0-23)
  * @param local_minute Minute (0-59)
+ * @param armed_at Optional output: the absolute time the alarm was armed for
  * @return ESP_OK on success, ESP_ERR_INVALID_STATE if the RTC or the system time is not usable
  */
-esp_err_t rtc_pcf85063_arm_daily_alarm(int local_hour, int local_minute);
+esp_err_t rtc_pcf85063_arm_daily_alarm(int local_hour, int local_minute, time_t *armed_at);
 
 #endif /* RTC_PCF85063_H */

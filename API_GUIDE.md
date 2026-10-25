@@ -101,20 +101,32 @@ the left-most pixel. Regenerate with `tools/bdf2font.py`.
 
 ```c
 // main/board_power/board_power.h
-void board_power_init_early(void);             // battery latch on, audio off
-void board_power_prepare_for_deep_sleep(void); // hold power pins through deep sleep
+void board_power_init_early(void);             // battery latch driven HIGH, audio on, holds released
+void board_power_latch_apply_policy(void);     // after NVS init: switch to the weak latch if this board can
+bool board_power_latch_is_weak(void);
+void board_power_prepare_for_deep_sleep(void); // e-paper and audio off, latch held through deep sleep
+
+// main/deep_sleep/deep_sleep.h
+esp_err_t deep_sleep_configure_wakeup(void);   // keys + RTC alarm, timer fallback 2 h after the alarm
+void deep_sleep_enter(void);
+void deep_sleep_fallback(const char *reason);  // sleep instead of staying awake after a failure
+void deep_sleep_start_awake_watchdog(void);    // force deep sleep after CONFIG_MAX_AWAKE_SECONDS
 
 // main/rtc_pcf85063/rtc_pcf85063.h
 esp_err_t rtc_pcf85063_init(void);
 esp_err_t rtc_pcf85063_restore_system_time(void);
 esp_err_t rtc_pcf85063_save_system_time(void);
-esp_err_t rtc_pcf85063_arm_daily_alarm(int local_hour, int local_minute);
+esp_err_t rtc_pcf85063_arm_daily_alarm(int local_hour, int local_minute, time_t *armed_at);
 
 // main/shtc3/shtc3.h
 esp_err_t shtc3_read(shtc3_reading_t *reading);   // temperature_x10, humidity
 
 // main/battery_level/battery_level.h
 int battery_level_read_percent(int *millivolts);  // 0-100, or -1
+int battery_level_last_mv(void);                  // last reading of this wake-up, or -1
+
+// main/battery_log/battery_log.h
+void battery_log_record(int millivolts, uint8_t flags);  // append this wake-up to the NVS history and print it
 
 // main/sntp/sntp.h
 bool sntp_is_sync_due(void);                      // Wi-Fi sync policy

@@ -60,6 +60,49 @@ menu "TOILET TIMER BOARD SETTINGS (Waveshare ESP32-S3-ePaper-1.54)"
       to keep the 3.3V rail enabled after the PWR key is released, and it is held
       HIGH through deep sleep. Driving it LOW switches the board off completely.
 
+  config BOARD_POWER_LATCH_WEAK
+    bool "Hold the battery latch with the internal pull-up (saves ~2.5 mA)"
+    default y
+    help
+      BAT_Control drives the base of the latch transistor through a 1 kOhm
+      resistor (R64), so a GPIO driven HIGH sinks about 2.6 mA for as long as
+      the board is on - deep sleep included. That is by far the biggest
+      consumer on the board (about 70 mAh per day, one week on a 500 mAh
+      cell).
+
+      With this option the pin becomes an input with the ESP32's internal
+      pull-up (about 45 kOhm) once the firmware runs, biasing the transistor
+      with roughly 60 uA instead. Whether that is enough depends on the
+      tolerances of the transistor and of the pull-up, so the firmware
+      protects itself: it records in NVS when it runs or sleeps on the weak
+      latch, and if the next boot is a power-on reset (the board switched
+      itself off) it falls back to driving the pin HIGH for good. A power
+      loss while the battery was almost empty is not counted as a failure.
+
+      The fix that always works is a hardware change: replace R64 (1 kOhm,
+      next to the PWR key) with 10-22 kOhm and disable this option.
+
+  config BOARD_POWER_LATCH_WEAK_TRIAL_ID
+    int "Weak latch trial number"
+    range 1 255
+    default 1
+    depends on BOARD_POWER_LATCH_WEAK
+    help
+      The verdict (confirmed / failed) is stored in NVS together with this
+      number. Change it to make the firmware forget a "failed" verdict and
+      try the weak latch again, for example after a wrong verdict caused by
+      an empty battery.
+
+  config MAX_AWAKE_SECONDS
+    int "Force deep sleep after this many seconds awake"
+    range 60 3600
+    default 300
+    help
+      Safety net: if anything hangs (display timeout, Wi-Fi that never
+      connects, a stuck task) the device goes to deep sleep anyway instead of
+      staying awake until the battery is flat. A running OTA download is
+      granted the same time once more.
+
   config BOARD_AUDIO_POWER_GPIO
     int "Audio codec power enable GPIO number (active LOW)"
     range ENV_GPIO_RANGE_MIN ENV_GPIO_RANGE_MAX
@@ -69,15 +112,17 @@ menu "TOILET TIMER BOARD SETTINGS (Waveshare ESP32-S3-ePaper-1.54)"
       The pin state is held through deep sleep.
 
   config BOARD_AUDIO_POWER_KEEP_ON
-    bool "Keep the audio codec powered"
+    bool "Keep the audio codec powered while awake"
     default y
     help
       The ES8311 codec shares the I2C bus with the RTC and the SHTC3 sensor.
       When its supply is switched off, its input protection diodes clamp SDA
-      and SCL low: the RTC and the sensor stop responding, and the bus
-      pull-ups leak through the unpowered chip. Keeping the codec powered in
-      its reset state costs only its standby current. The speaker amplifier
-      (PA_CTRL) stays disabled either way.
+      and SCL low: the RTC and the sensor stop responding. Keeping the codec
+      powered while awake costs only its standby current.
+
+      The rail is always switched off for deep sleep, where nobody uses the
+      bus: with the load switch on, its 10 kOhm gate pull-up alone wastes
+      0.33 mA. The speaker amplifier (PA_CTRL) stays disabled either way.
 
   config BOARD_I2C_SDA_GPIO
     int "I2C SDA GPIO number (RTC, SHTC3, codec)"
@@ -121,6 +166,21 @@ menu "TOILET TIMER BOARD SETTINGS (Waveshare ESP32-S3-ePaper-1.54)"
       Calibration point: the voltage this firmware measures on a fully charged
       battery (the on-board divider and ADC read a little low). 3300 mV is
       always 0 %; the lithium discharge curve is stretched between the two.
+
+  config BATTERY_LOG_ENABLED
+    bool "Keep a battery voltage history in NVS"
+    default y
+    depends on IS_BATTERY_LEVEL_ENABLED
+    help
+      Stores the battery voltage of every wake-up, with its cause and the
+      latch mode, in a ring buffer in NVS and prints the history at boot.
+      Lets you measure the real drain over days without a multimeter.
+
+  config BATTERY_LOG_ENTRIES
+    int "Number of wake-ups kept in the history"
+    range 8 128
+    default 48
+    depends on BATTERY_LOG_ENABLED
 
   config BATTERY_LOW_PERCENT
     int "Low battery warning threshold (%)"

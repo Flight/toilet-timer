@@ -123,6 +123,9 @@ void app_main(void)
             break;
     }
 
+    /* Whatever happens from here on, the device goes back to sleep in time */
+    deep_sleep_start_awake_watchdog();
+
     esp_err_t nvs_err = nvs_flash_init();
     if (nvs_err == ESP_ERR_NVS_NO_FREE_PAGES || nvs_err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         nvs_flash_erase();
@@ -130,8 +133,12 @@ void app_main(void)
     }
     if (nvs_err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize NVS (%s)", esp_err_to_name(nvs_err));
-        return;
+        deep_sleep_fallback("NVS init failed");
     }
+
+    /* The battery latch was driven HIGH by board_power_init_early(); now that
+     * NVS is up, switch to the internal pull-up if this board can do it */
+    board_power_latch_apply_policy();
 
     global_event_group = xEventGroupCreate();
 

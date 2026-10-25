@@ -269,7 +269,7 @@ esp_err_t rtc_pcf85063_arm_alarm_at(time_t target)
     return ESP_OK;
 }
 
-esp_err_t rtc_pcf85063_arm_daily_alarm(int local_hour, int local_minute)
+esp_err_t rtc_pcf85063_arm_daily_alarm(int local_hour, int local_minute, time_t *armed_at)
 {
     if (!s_available || !time_utils_is_valid()) {
         return ESP_ERR_INVALID_STATE;
@@ -296,5 +296,9 @@ esp_err_t rtc_pcf85063_arm_daily_alarm(int local_hour, int local_minute)
     }
 
     ESP_LOGI(TAG, "Daily alarm at %02d:%02d local", local_hour, local_minute);
-    return rtc_pcf85063_arm_alarm_at(target);
+    esp_err_t err = rtc_pcf85063_arm_alarm_at(target);
+    if (err == ESP_OK && armed_at != NULL) {
+        *armed_at = target;
+    }
+    return err;
 }
